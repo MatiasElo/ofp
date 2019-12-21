@@ -425,6 +425,8 @@ int ofp_init_global(odp_instance_t instance, ofp_global_param_t *params)
 
 	ofp_init_global_called = 1;
 
+	odp_schedule_config(NULL);
+
 	HANDLE_ERROR(ofp_init_pre_global(params));
 
 	/* cpu mask for slow path threads */

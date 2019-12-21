@@ -348,7 +348,7 @@ int build_classifier(int if_count, char **if_names)
 		}
 
 		pmr_udp = build_udp_prm(cos_def, cos_udp);
-		if (pmr_udp == ODP_PMR_INVAL) {
+		if (pmr_udp == ODP_PMR_INVALID) {
 			OFP_ERR("Failed to create UDP PRM");
 			return -1;
 		}
