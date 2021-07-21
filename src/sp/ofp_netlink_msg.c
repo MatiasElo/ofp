@@ -458,7 +458,7 @@ The processed msg here RTM_NEWADDR, RTM_DELADDR start with ifaddrmsg
 	}
 
 	if (!name)
-		name = ofp_port_vlan_to_ifnet_name(dev->port, dev->vlan);
+		name = ofp_ifport_port_subport_to_name(dev->port, dev->vlan);
 
 	if (nlh->nlmsg_type == RTM_NEWADDR || nlh->nlmsg_type == RTM_DELADDR) {
 		OFP_DBG(" - %s %s local=%s bcast=%s to '%s'",

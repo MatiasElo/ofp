@@ -61,7 +61,9 @@ void f_address_add(ofp_print_t *pr, const char *s)
 	}
 
 	addr = odp_cpu_to_be_32((a << 24) | (b << 16) | (c << 8) | d);
-	port = ofp_name_to_port_vlan(dev, &vlan);
+	ret = ofp_ifport_name_to_port_subport(dev, &port, &vlan);
+	if (ret == -1)
+		return;
 
 	if (port == OFP_IFPORT_GRE || port == OFP_IFPORT_VXLAN ||
 	    port == OFP_IFPORT_LOCAL) {
@@ -90,7 +92,9 @@ void f_address_del(ofp_print_t *pr, const char *s)
 		return;
 	}
 	addr = odp_cpu_to_be_32((a << 24) | (b << 16) | (c << 8) | d);
-	port = ofp_name_to_port_vlan(dev, &vlan);
+	ret = ofp_ifport_name_to_port_subport(dev, &port, &vlan);
+	if (ret == -1)
+		return;
 	err = ofp_ifport_net_ipv4_addr_del(port, vlan, vrf, addr, m);
 
 	if (err != NULL)

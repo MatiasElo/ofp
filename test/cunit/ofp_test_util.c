@@ -143,39 +143,6 @@ test_ofp_mask_length(void)
 	CU_ASSERT_EQUAL(res, 22);
 }
 
-static void
-test_ofp_name_to_port_vlan(void)
-{
-	char devname[] = "fp4.100";
-	int port, vlan;
-
-	port = ofp_name_to_port_vlan(devname, &vlan);
-
-	CU_ASSERT_EQUAL(port, 4);
-	CU_ASSERT_EQUAL(vlan, 100);
-
-	strcpy(devname, "gre101");
-	port = ofp_name_to_port_vlan(devname, &vlan);
-
-	CU_ASSERT_EQUAL(port, OFP_IFPORT_GRE);
-	CU_ASSERT_EQUAL(vlan, 101);
-
-}
-
-static void
-test_ofp_port_vlan_to_ifnet_name(void)
-{
-	int port = 4;
-	int vlan = 100;
-	char *res = (char *)malloc(20);
-
-	memset(res, 0x0, 20);
-
-	res = ofp_port_vlan_to_ifnet_name(port, vlan);
-
-	CU_ASSERT_STRING_EQUAL(res, "fp4.100");
-}
-
 static void test_ofp_has_mac(void)
 {
 	int res;
@@ -234,15 +201,6 @@ main(void)
 		return CU_get_error();
 	}
 	if (NULL == CU_ADD_TEST(ptr_suite, test_ofp_mask_length)) {
-		CU_cleanup_registry();
-		return CU_get_error();
-	}
-	if (NULL == CU_ADD_TEST(ptr_suite, test_ofp_name_to_port_vlan)) {
-		CU_cleanup_registry();
-		return CU_get_error();
-	}
-	if (NULL == CU_ADD_TEST(ptr_suite,
-				test_ofp_port_vlan_to_ifnet_name)) {
 		CU_cleanup_registry();
 		return CU_get_error();
 	}

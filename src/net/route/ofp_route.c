@@ -153,7 +153,7 @@ void ofp_add_mac6(struct ofp_ifnet *dev, uint8_t *addr, uint8_t *mac)
 
 	(void) dev;
 	OFP_DBG("MAC added for %s (%s)", ofp_print_ip6_addr(addr),
-		ofp_port_vlan_to_ifnet_name(dev->port, dev->vlan));
+		ofp_ifport_port_subport_to_name(dev->port, dev->vlan));
 
 	memcpy(nh->mac, mac, 6);
 
@@ -394,7 +394,7 @@ static void show_routes(ofp_print_t *pr, uint32_t key, int level,
 	ofp_print(pr, "%-18s %-15s %s   ",
 		  buf,
 		  ofp_print_ip_addr(data->gw),
-		  ofp_port_vlan_to_ifnet_name(data->port, data->vlan));
+		  ofp_ifport_port_subport_to_name(data->port, data->vlan));
 	send_flags(pr, data->flags);
 	ofp_print(pr, "\r\n");
 }
@@ -408,7 +408,7 @@ static void show_routes6(ofp_print_t *pr, uint8_t *key, int level,
 	ofp_print(pr, "%-30s %-28s  %s ",
 		  buf,
 		  ofp_print_ip6_addr(data->gw),
-		  ofp_port_vlan_to_ifnet_name(data->port, data->vlan));
+		  ofp_ifport_port_subport_to_name(data->port, data->vlan));
 	send_flags(pr, data->flags);
 	ofp_print(pr, "\r\n");
 }

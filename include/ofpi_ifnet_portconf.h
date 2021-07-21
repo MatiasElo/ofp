@@ -23,6 +23,7 @@
 #define PORT_UNDEF 0xFFFF
 
 #define OFP_IFNAME_PREFIX "fp"
+#define OFP_IFNAME_SP_PREFIX "sp"
 #define OFP_GRE_IFNAME_PREFIX "gre"
 #define OFP_VXLAN_IFNAME_PREFIX "vxlan"
 #define OFP_LOCAL_IFNAME_PREFIX "lo"
@@ -418,4 +419,8 @@ int ofp_vxlan_interfaces_destroy(void);
 int ofp_net_interfaces_destroy(void);
 
 int ofp_destroy_subports(struct ofp_ifnet *ifnet);
+
+int ofp_ifport_name_to_port_subport(const char *dev, int *port, int *subport);
+char *ofp_ifport_port_subport_to_name(int port, int subport);
+char *ofp_ifport_port_subport_to_sp_name(int port, int subport);
 #endif

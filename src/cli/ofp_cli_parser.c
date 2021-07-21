@@ -93,10 +93,10 @@ static int topname_ok(char *val)
 
 static int dev_ok(char *val)
 {
-	int port, vlan;
+	int port, vlan, ret;
 
-	port = ofp_name_to_port_vlan(val, &vlan);
-	return (port >= 0 && port < ofp_ifport_count());
+	ret = ofp_ifport_name_to_port_subport(val, &port, &vlan);
+	return (ret != -1 && port >= 0 && port < ofp_ifport_count());
 }
 
 static int ip4net_ok(char *val)

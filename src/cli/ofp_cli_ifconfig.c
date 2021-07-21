@@ -97,14 +97,15 @@ void f_ifconfig(ofp_print_t *pr, const char *s)
 	int port, a, b, c, d, m, vlan, vrf = 0;
 	uint32_t addr;
 	const char *err;
+	int ret;
 
 	if (sscanf(s, "%s %d.%d.%d.%d/%d %d", dev, &a, &b,
 		&c, &d, &m, &vrf) < 6)
 		return;
 	addr = odp_cpu_to_be_32((a << 24) | (b << 16) | (c << 8) | d);
-	port = ofp_name_to_port_vlan(dev, &vlan);
+	ret = ofp_ifport_name_to_port_subport(dev, &port, &vlan);
 
-	if (port == OFP_IFPORT_GRE || port == OFP_IFPORT_VXLAN) {
+	if (ret == -1 || port == OFP_IFPORT_GRE || port == OFP_IFPORT_VXLAN) {
 		ofp_print(pr, "Invalid device name.\r\n");
 		return;
 	}
@@ -122,15 +123,15 @@ void f_ifconfig_tun(ofp_print_t *pr, const char *s)
 {
 	char dev[16], loc[16], rem[16], ip[16], peer[16];
 	uint32_t tun_loc, tun_rem, addr, p2p;
-	int port, vlan, vrf = 0, masklen = 32;
+	int port, vlan, vrf = 0, masklen = 32, ret;
 	const char *err;
 
 	if (sscanf(s, "%s %s %s %s %s %d", dev, loc, rem, peer, ip, &vrf) < 5)
 		return;
 
-	port = ofp_name_to_port_vlan(dev, &vlan);
+	ret = ofp_ifport_name_to_port_subport(dev, &port, &vlan);
 
-	if (port != OFP_IFPORT_GRE) {
+	if (ret == -1 || port != OFP_IFPORT_GRE) {
 		ofp_print(pr, "Invalid device name.\r\n");
 		return;
 	}
@@ -163,7 +164,7 @@ void f_ifconfig_vxlan(ofp_print_t *pr, const char *s)
 {
 	char dev[16], physdev[16], group[16];
 	uint32_t vxlan_group, addr;
-	int n, port, subport_vni, physport, physvlan, a, b, c, d, m;
+	int n, port, subport_vni, physport, physvlan, a, b, c, d, m, ret;
 	const char *err;
 
 	if ((n = sscanf(s, "%s %s %s %d.%d.%d.%d/%d",
@@ -173,14 +174,18 @@ void f_ifconfig_vxlan(ofp_print_t *pr, const char *s)
 	}
 
 	addr = odp_cpu_to_be_32((a << 24) | (b << 16) | (c << 8) | d);
-	port = ofp_name_to_port_vlan(dev, &subport_vni);
+	ret = ofp_ifport_name_to_port_subport(dev, &port, &subport_vni);
 
-	if (port != OFP_IFPORT_VXLAN) {
+	if (ret == -1 || port != OFP_IFPORT_VXLAN) {
 		ofp_print(pr, "Invalid device name %s.\r\n", dev);
 		return;
 	}
 
-	physport = ofp_name_to_port_vlan(physdev, &physvlan);
+	ret = ofp_ifport_name_to_port_subport(physdev, &physport, &physvlan);
+	if (ret == -1) {
+		ofp_print(pr, "Invalid device name %s.\r\n", physdev);
+		return;
+	}
 
 	if (!ofp_parse_ip_addr(group, &vxlan_group)) {
 		ofp_print(pr, "Invalid group address.\r\n");
@@ -201,7 +206,7 @@ void f_ifconfig_v6(ofp_print_t *pr, const char *s)
 {
 	char dev[16];
 	uint8_t addr6[16];
-	int prefix, port, vlan;
+	int prefix, port, vlan, ret;
 	const char *tk;
 	const char *tk_end;
 	const char *err;
@@ -217,8 +222,8 @@ void f_ifconfig_v6(ofp_print_t *pr, const char *s)
 	memcpy(dev, tk, tk_end - tk);
 	dev[tk_end - tk] = 0;
 
-	port = ofp_name_to_port_vlan(dev, &vlan);
-	if (port == -1 || port == OFP_IFPORT_GRE) {
+	ret = ofp_ifport_name_to_port_subport(dev, &port, &vlan);
+	if (ret == -1 || port == OFP_IFPORT_GRE) {
 		ofp_print(pr, "Invalid device name.\r\n");
 		return;
 	}
@@ -257,12 +262,14 @@ void f_ifconfig_down(ofp_print_t *pr, const char *s)
 {
 	/* "ifconfig DEV down"; */
 	char dev[16];
-	int port, vlan;
+	int port, vlan, ret;
 	const char *err;
 
 	if (sscanf(s, "%s", dev) < 1)
 		return;
-	port = ofp_name_to_port_vlan(dev, &vlan);
+	ret = ofp_ifport_name_to_port_subport(dev, &port, &vlan);
+	if (ret == -1)
+		return;
 
 	err = ofp_ifport_ifnet_down(port, vlan);
 

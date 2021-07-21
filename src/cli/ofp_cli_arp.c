@@ -54,6 +54,7 @@ void f_arp_add(ofp_print_t *pr, const char *s)
 	struct ofp_ifnet *itf;
 	uint32_t ipv4_addr;
 	uint8_t mac[OFP_ETHER_ADDR_LEN];
+	int ret;
 
 	if (sscanf(s, " %d.%d.%d.%d %x:%x:%x:%x:%x:%x %s",
 		   &a, &b, &c, &d, &e, &f, &g, &h, &i, &j, dev) != 11)
@@ -67,8 +68,8 @@ void f_arp_add(ofp_print_t *pr, const char *s)
 	mac[4] = i;
 	mac[5] = j;
 
-	port = ofp_name_to_port_vlan(dev, &vlan);
-	if (port == -1 || !OFP_IFPORT_IS_NET(port)) {
+	ret = ofp_ifport_name_to_port_subport(dev, &port, &vlan);
+	if (ret == -1 || !OFP_IFPORT_IS_NET(port)) {
 		ofp_print(pr, "Invalid device name.\r\n");
 		return;
 	}

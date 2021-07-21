@@ -608,11 +608,11 @@ int ofp_ioctl(int sockfd, int request, ...)
 			       (so, request, data, NULL, NULL));
 	} else if (OFP_IOCGROUP(request) == 'i') {
 		/* All the interface requests start with interface name */
-		int port, vlan = 0;
+		int port, vlan = 0, ret;
 		char *name = data;
 
-		port = ofp_name_to_port_vlan(name, &vlan);
-		if (port < 0) {
+		ret = ofp_ifport_name_to_port_subport(name, &port, &vlan);
+		if (ret == -1) {
 			ofp_errno = OFP_EBADF;
 			return -1;
 		}
@@ -642,7 +642,7 @@ int ofp_ioctl(int sockfd, int request, ...)
 				ofp_errno = OFP_EOPNOTSUPP;
 		}
 	} else if (OFP_IOCGROUP(request) == 'r') {
-		int port = 0, vlan = 0;
+		int port = 0, vlan = 0, ret;
 		struct ofp_rtentry *rt = data;
 		uint32_t dst  = ((struct ofp_sockaddr_in *)&rt->rt_dst)->sin_addr.s_addr;
 		uint32_t mask = ((struct ofp_sockaddr_in *)&rt->rt_genmask)->sin_addr.s_addr;
@@ -658,8 +658,8 @@ int ofp_ioctl(int sockfd, int request, ...)
 
 		if (request == (int)OFP_SIOCADDRT) {
 			if (rt->rt_dev) {
-				port = ofp_name_to_port_vlan(rt->rt_dev, &vlan);
-				if (port < 0) {
+				ret = ofp_ifport_name_to_port_subport(rt->rt_dev, &port, &vlan);
+				if (ret == -1) {
 					ofp_errno = OFP_EBADF;
 					return -1;
 				}

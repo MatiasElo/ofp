@@ -365,8 +365,8 @@ static int iter_vlan(void *key, void *iter_arg)
 			  ofp_print_ip6_addr(iface->link_local),
 #endif /* INET6 */
 			  ofp_print_ip_addr(iface->ip_p2p),
-			  ofp_port_vlan_to_ifnet_name(iface->physport,
-						      iface->physvlan),
+			  ofp_ifport_port_subport_to_name(iface->physport,
+							  iface->physvlan),
 			  iface->if_mtu);
 		if (res == 0)
 			print_eth_stats(stats, pr);
@@ -608,7 +608,7 @@ const char *ofp_ifport_net_ipv4_up(int port, uint16_t subport_vlan,
 			/* Create vrf in not exist using dummy call */
 			exec_sys_call_depending_on_vrf("", vrf);
 			/* Move to vrf (can be done only once!) */
-			iname = ofp_port_vlan_to_ifnet_name(port, OFP_IFPORT_NET_SUBPORT_ITF);
+			iname = ofp_ifport_port_subport_to_name(port, OFP_IFPORT_NET_SUBPORT_ITF);
 			snprintf(cmd, sizeof(cmd),
 				 "ip link set %s netns vrf%d", iname, vrf);
 			exec_sys_call_depending_on_vrf(cmd, 0);
@@ -627,7 +627,7 @@ const char *ofp_ifport_net_ipv4_up(int port, uint16_t subport_vlan,
 			data->sp_itf_mgmt = sp_itf_mgmt;
 
 			if (data->sp_itf_mgmt) {
-				iname = ofp_port_vlan_to_ifnet_name(port, OFP_IFPORT_NET_SUBPORT_ITF);
+				iname = ofp_ifport_port_subport_to_name(port, OFP_IFPORT_NET_SUBPORT_ITF);
 				snprintf(cmd, sizeof(cmd),
 					 "ip link add name %s.%d link %s type vlan id %d",
 					 iname, subport_vlan, iname, subport_vlan);
@@ -675,7 +675,8 @@ const char *ofp_ifport_net_ipv4_up(int port, uint16_t subport_vlan,
 			mask_t = odp_be_to_cpu_32(mask);
 			snprintf(cmd, sizeof(cmd),
 				 "ifconfig %s %s netmask %d.%d.%d.%d up",
-				 ofp_port_vlan_to_ifnet_name(port, subport_vlan),
+				 ofp_ifport_port_subport_to_name(port,
+								 subport_vlan),
 				 ofp_print_ip_addr(addr),
 				 (uint8_t)(mask_t >> 24),
 				 (uint8_t)(mask_t >> 16),
@@ -722,7 +723,7 @@ const char *ofp_ifport_net_ipv4_up(int port, uint16_t subport_vlan,
 
 		if (data->sp_itf_mgmt) {
 			mask_t = odp_be_to_cpu_32(mask);
-			iname = ofp_port_vlan_to_ifnet_name(port, OFP_IFPORT_NET_SUBPORT_ITF);
+			iname = ofp_ifport_port_subport_to_name(port, OFP_IFPORT_NET_SUBPORT_ITF);
 			snprintf(cmd, sizeof(cmd),
 				 "ifconfig %s %s netmask %d.%d.%d.%d up",
 				 iname, ofp_print_ip_addr(addr),
@@ -781,7 +782,7 @@ const char *ofp_ifport_net_ipv4_addr_add(int port, uint16_t vlan, uint16_t vrf,
 	if (data->sp_itf_mgmt) {
 		snprintf(cmd, sizeof(cmd), "ip address add %s/%d broadcast %s dev %s",
 			ofp_print_ip_addr(addr), masklen, ofp_print_ip_addr(addr | ~mask),
-			ofp_port_vlan_to_ifnet_name(port, vlan));
+			ofp_ifport_port_subport_to_name(port, vlan));
 		if (exec_sys_call_depending_on_vrf(cmd, vrf))
 			OFP_INFO("Command %s failed\n", cmd);
 	}
@@ -842,7 +843,7 @@ const char *ofp_ifport_net_ipv4_addr_del(int port, uint16_t vlan, int vrf,
 		snprintf(cmd, sizeof(cmd),
 			"ip addr del %s/%d dev %s",
 			ofp_print_ip_addr(addr),
-			masklen, ofp_port_vlan_to_ifnet_name(port, vlan));
+			masklen, ofp_ifport_port_subport_to_name(port, vlan));
 		if (exec_sys_call_depending_on_vrf(cmd, vrf))
 			OFP_INFO("Command %s failed\n", cmd);
 	}
@@ -903,7 +904,7 @@ const char *ofp_ifport_tun_ipv4_up(int port, uint16_t greid,
 		if (data->sp_itf_mgmt) {	/*old interface*/
 			snprintf(cmd, sizeof(cmd),
 				 "ip addr del dev %s %s peer %s",
-				 ofp_port_vlan_to_ifnet_name(port, greid),
+				 ofp_ifport_port_subport_to_name(port, greid),
 				 ofp_print_ip_addr(data->ip_addr_info[0].ip_addr),
 				 ofp_print_ip_addr(data->ip_p2p));
 			exec_sys_call_depending_on_vrf(cmd, data->vrf);
@@ -936,19 +937,19 @@ const char *ofp_ifport_tun_ipv4_up(int port, uint16_t greid,
 		snprintf(cmd, sizeof(cmd),
 			 "ip tunnel %s %s mode gre local %s remote %s ttl 255",
 			 (new_tun ? "add" : "change"),
-			 ofp_port_vlan_to_ifnet_name(port, greid),
+			 ofp_ifport_port_subport_to_name(port, greid),
 			 ofp_print_ip_addr(tun_loc),
 			 ofp_print_ip_addr(tun_rem));
 		exec_sys_call_depending_on_vrf(cmd, vrf);
 
 		snprintf(cmd, sizeof(cmd),
 			 "ip link set dev %s up",
-			 ofp_port_vlan_to_ifnet_name(port, greid));
+			 ofp_ifport_port_subport_to_name(port, greid));
 		exec_sys_call_depending_on_vrf(cmd, vrf);
 
 		snprintf(cmd, sizeof(cmd),
 			 "ip addr add dev %s %s peer %s",
-			 ofp_port_vlan_to_ifnet_name(port, greid),
+			 ofp_ifport_port_subport_to_name(port, greid),
 			 ofp_print_ip_addr(addr), ofp_print_ip_addr(p2p));
 		exec_sys_call_depending_on_vrf(cmd, vrf);
 	} else
@@ -1053,7 +1054,7 @@ const char *ofp_ifport_vxlan_ipv4_up(int vni, uint32_t group,
 		snprintf(cmd, sizeof(cmd),
 			 "ip link add vxlan%d type vxlan id %d group %s dev %s dstport %d",
 			 vni, vni, ofp_print_ip_addr(group),
-			 ofp_port_vlan_to_ifnet_name(physport, physvlan),
+			 ofp_ifport_port_subport_to_name(physport, physvlan),
 			 VXLAN_PORT);
 		exec_sys_call_depending_on_vrf(cmd, data->vrf);
 
@@ -1191,7 +1192,7 @@ const char *ofp_ifport_net_ipv6_up(int port, uint16_t vlan,
 			data->sp_itf_mgmt = sp_itf_mgmt;
 
 			if (data->sp_itf_mgmt) {
-				iname = ofp_port_vlan_to_ifnet_name(port, OFP_IFPORT_NET_SUBPORT_ITF);
+				iname = ofp_ifport_port_subport_to_name(port, OFP_IFPORT_NET_SUBPORT_ITF);
 				snprintf(cmd, sizeof(cmd),
 					 "ip link add name %s.%d link %s type vlan id %d",
 					 iname, vlan, iname, vlan);
@@ -1226,7 +1227,7 @@ const char *ofp_ifport_net_ipv6_up(int port, uint16_t vlan,
 		if (data->sp_itf_mgmt) {
 			snprintf(cmd, sizeof(cmd),
 				 "ifconfig %s inet6 add %s/%d up",
-				 ofp_port_vlan_to_ifnet_name(port, vlan),
+				 ofp_ifport_port_subport_to_name(port, vlan),
 				 ofp_print_ip6_addr(addr), masklen);
 			exec_sys_call_depending_on_vrf(cmd, data->vrf);
 		}
@@ -1267,7 +1268,7 @@ const char *ofp_ifport_net_ipv6_up(int port, uint16_t vlan,
 		if (data->sp_itf_mgmt) {
 			snprintf(cmd, sizeof(cmd),
 				 "ifconfig %s inet6 add %s/%d up",
-				 ofp_port_vlan_to_ifnet_name(port, OFP_IFPORT_NET_SUBPORT_ITF),
+				 ofp_ifport_port_subport_to_name(port, OFP_IFPORT_NET_SUBPORT_ITF),
 				 ofp_print_ip6_addr(addr), masklen);
 
 			exec_sys_call_depending_on_vrf(cmd, data->vrf);
@@ -1484,7 +1485,7 @@ static int ofp_ifnet_addr_cleanup(struct ofp_ifnet *ifnet)
 			} else if (!OFP_IFPORT_IS_NET_U(ifnet->port)) {
 				snprintf(cmd, sizeof(cmd),
 					 "ifconfig %s 0.0.0.0",
-					 ofp_port_vlan_to_ifnet_name(ifnet->port, ifnet->vlan));
+					 ofp_ifport_port_subport_to_name(ifnet->port, ifnet->vlan));
 				exec_sys_call_depending_on_vrf(cmd, vrf);
 			}
 		}
@@ -1508,7 +1509,8 @@ static int ofp_ifnet_addr_cleanup(struct ofp_ifnet *ifnet)
 			snprintf(cmd, sizeof(cmd),
 				 "ifconfig %s inet6 del %s/%d",
 				 ifnet->port == OFP_IFPORT_LOCAL ? "lo" :
-				 ofp_port_vlan_to_ifnet_name(ifnet->port, ifnet->vlan),
+				 ofp_ifport_port_subport_to_name(ifnet->port,
+								 ifnet->vlan),
 				 ofp_print_ip6_addr(ifnet->ip6_addr),
 				 ifnet->ip6_prefix);
 			exec_sys_call_depending_on_vrf(cmd, vrf);
@@ -1550,7 +1552,7 @@ static const char *ofp_ifport_net_down(int port, uint16_t subport)
 		/* Already deleted
 		if (ifnet->sp_itf_mgmt) {
 			snprintf(cmd, sizeof(cmd), "ip link del %s",
-				ofp_port_vlan_to_ifnet_name(port, subport));
+				ofp_ifport_port_subport_to_name(port, subport));
 			exec_sys_call_depending_on_vrf(cmd, ifnet->vrf);
 		}*/
 #endif /*SP*/
@@ -1629,7 +1631,7 @@ static const char *ofp_ifport_vxlan_down(int port, uint16_t subport)
 #ifdef SP
 	if (data->sp_itf_mgmt) {
 		snprintf(cmd, sizeof(cmd), "ip link del %s",
-			 ofp_port_vlan_to_ifnet_name(port, subport));
+			 ofp_ifport_port_subport_to_name(port, subport));
 		exec_sys_call_depending_on_vrf(cmd, data->vrf);
 	}
 #endif /*SP*/
@@ -1663,7 +1665,7 @@ static const char *ofp_ifport_gre_down(int port, uint16_t subport)
 #ifdef SP
 	if (data->sp_itf_mgmt) {
 		snprintf(cmd, sizeof(cmd), "ip tunnel del %s",
-			 ofp_port_vlan_to_ifnet_name(port, subport));
+			 ofp_ifport_port_subport_to_name(port, subport));
 		exec_sys_call_depending_on_vrf(cmd, data->vrf);
 	}
 #endif /*SP*/
@@ -2424,3 +2426,122 @@ struct ofp_ifnet *ofp_ifaddr6_elem_get(uint8_t *addr6)
 	return ifa6;
 }
 #endif /* INET6 */
+
+int ofp_ifport_name_to_port_subport(const char *dev, int *port, int *subport)
+{
+	char *p;
+
+	if (!dev || !port || !subport)
+		return -1;
+
+	/* gre */
+	if (strncmp(dev, OFP_GRE_IFNAME_PREFIX,
+		    strlen(OFP_GRE_IFNAME_PREFIX)) == 0) {
+		*port = OFP_IFPORT_GRE;
+		*subport = atoi(dev + strlen(OFP_GRE_IFNAME_PREFIX));
+		return 0;
+	}
+
+	/* vxlan */
+	if (strncmp(dev, OFP_VXLAN_IFNAME_PREFIX,
+		    strlen(OFP_VXLAN_IFNAME_PREFIX)) == 0) {
+		const char *n = dev + strlen(OFP_VXLAN_IFNAME_PREFIX);
+
+		if (*n < '0' || *n > '9')
+			return -1;
+		*port = OFP_IFPORT_VXLAN;
+		*subport = atoi(n);
+		return 0;
+	}
+
+	/* local */
+	if (strncmp(dev, OFP_LOCAL_IFNAME_PREFIX,
+		    strlen(OFP_LOCAL_IFNAME_PREFIX)) == 0) {
+		const char *n = dev + strlen(OFP_LOCAL_IFNAME_PREFIX);
+
+		if (*n < '0' || *n > '9')
+			return -1;
+		*port = OFP_IFPORT_LOCAL;
+		*subport = atoi(n);
+		return 0;
+	}
+
+	/* fp */
+	if (strncmp(dev, OFP_IFNAME_PREFIX, strlen(OFP_IFNAME_PREFIX)))
+		return -1;
+
+	*port = atoi(dev + strlen(OFP_IFNAME_PREFIX));
+
+	p = strchr(dev, '.');
+
+	if (p)
+		*subport = atoi(p + 1);
+	else
+		*subport = OFP_IFPORT_NET_SUBPORT_ITF;
+
+	return 0;
+}
+
+char *ofp_ifport_port_subport_to_name(int port, int subport)
+{
+	static char buf[2][18];
+	static int sel;
+
+	sel = sel ^ 1;
+
+	switch (port) {
+	case OFP_IFPORT_LOCAL:
+		sprintf(buf[sel], "%s%d",
+			OFP_LOCAL_IFNAME_PREFIX, subport);
+		break;
+	case OFP_IFPORT_GRE:
+		sprintf(buf[sel], "%s%d",
+			OFP_GRE_IFNAME_PREFIX, subport);
+		break;
+	case OFP_IFPORT_VXLAN:
+		sprintf(buf[sel], "%s%d",
+			OFP_VXLAN_IFNAME_PREFIX, subport);
+		break;
+	default:
+		if (subport != OFP_IFPORT_NET_SUBPORT_ITF)
+			sprintf(buf[sel], "%s%d.%d",
+				OFP_IFNAME_PREFIX, port, subport);
+		else
+			sprintf(buf[sel], "%s%d", OFP_IFNAME_PREFIX, port);
+	}
+
+	return buf[sel];
+}
+
+char *ofp_ifport_port_subport_to_sp_name(int port, int subport)
+{
+	static char buf[2][18];
+	static int sel;
+
+	sel = sel ^ 1;
+
+	switch (port) {
+	case OFP_IFPORT_LOCAL:
+		sprintf(buf[sel], "%s%d",
+			OFP_LOCAL_IFNAME_PREFIX, subport);
+		break;
+	case OFP_IFPORT_GRE:
+		sprintf(buf[sel], "%s%d",
+			OFP_GRE_IFNAME_PREFIX, subport);
+		break;
+	case OFP_IFPORT_VXLAN:
+		sprintf(buf[sel], "%s%d",
+			OFP_VXLAN_IFNAME_PREFIX, subport);
+		break;
+	default:
+		if (subport != OFP_IFPORT_NET_SUBPORT_ITF)
+			sprintf(buf[sel], "%s%d.%d",
+				OFP_IFNAME_SP_PREFIX,
+				port + V_global_param.if_sp_offset, subport);
+		else
+			sprintf(buf[sel], "%s%d", OFP_IFNAME_SP_PREFIX,
+				port + V_global_param.if_sp_offset);
+	}
+
+	return buf[sel];
+}

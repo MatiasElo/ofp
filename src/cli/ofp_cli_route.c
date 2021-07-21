@@ -29,7 +29,7 @@ void f_route_show(ofp_print_t *pr, const char *s)
 void f_route_add(ofp_print_t *pr, const char *s)
 {
 	uint32_t gwaddr, destaddr;
-	int a, b, c, d, e, f, g, h, port, mlen, vlan;
+	int a, b, c, d, e, f, g, h, port, mlen, vlan, ret;
 	char dev[16];
 
 	if (sscanf(s, "%d.%d.%d.%d/%d %d.%d.%d.%d %s",
@@ -39,8 +39,8 @@ void f_route_add(ofp_print_t *pr, const char *s)
 	destaddr = odp_cpu_to_be_32((a << 24) | (b << 16) | (c << 8) | d);
 	gwaddr = odp_cpu_to_be_32((e << 24) | (f << 16) | (g << 8) | h);
 
-	port = ofp_name_to_port_vlan(dev, &vlan);
-	if (port < 0 || port >= ofp_ifport_count()) {
+	ret = ofp_ifport_name_to_port_subport(dev, &port, &vlan);
+	if (ret == -1 || port < 0 || port >= ofp_ifport_count()) {
 		ofp_print(pr, "Invalid port!\r\n");
 		return;
 	}
@@ -54,7 +54,7 @@ void f_route_add(ofp_print_t *pr, const char *s)
 void f_route_add_vrf(ofp_print_t *pr, const char *s)
 {
 	uint32_t gwaddr, destaddr;
-	int a, b, c, d, e, f, g, h, port, mlen, vrf, vlan;
+	int a, b, c, d, e, f, g, h, port, mlen, vrf, vlan, ret;
 	char dev[16];
 
 	if (sscanf(s, "%d %d.%d.%d.%d/%d %d.%d.%d.%d %s",
@@ -64,8 +64,8 @@ void f_route_add_vrf(ofp_print_t *pr, const char *s)
 	destaddr = odp_cpu_to_be_32((a << 24) | (b << 16) | (c << 8) | d);
 	gwaddr = odp_cpu_to_be_32((e << 24) | (f << 16) | (g << 8) | h);
 
-	port = ofp_name_to_port_vlan(dev, &vlan);
-	if (port < 0 || port >= ofp_ifport_count()) {
+	ret = ofp_ifport_name_to_port_subport(dev, &port, &vlan);
+	if (ret == -1 || port < 0 || port >= ofp_ifport_count()) {
 		ofp_print(pr, "Invalid port!\r\n");
 		return;
 	}
@@ -80,7 +80,7 @@ void f_route_add_v6(ofp_print_t *pr, const char *s)
 {
 	uint8_t dst6[16];
 	uint8_t gw6[16];
-	int port, vlan, mlen;
+	int port, vlan, mlen, ret;
 	const char *tk;
 	const char *tk_end;
 	const char *last;
@@ -140,8 +140,8 @@ void f_route_add_v6(ofp_print_t *pr, const char *s)
 	}
 	tk_end = last;
 
-	port = ofp_name_to_port_vlan(tk, &vlan);
-	if (port < 0 || port >= ofp_ifport_count()) {
+	ret = ofp_ifport_name_to_port_subport(tk, &port, &vlan);
+	if (ret == -1 || port < 0 || port >= ofp_ifport_count()) {
 		ofp_print(pr, "Invalid port!\r\n");
 		return;
 	}
