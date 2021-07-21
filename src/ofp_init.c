@@ -197,6 +197,7 @@ static void read_conf_file(ofp_initialize_param_t *params, const char *filename)
 		params->p = i;
 
 	GET_CONF_INT(bool, if_sp_mgmt);
+	GET_CONF_INT(int, if_sp_offset);
 	GET_CONF_STR(pktin_mode, pktin_mode);
 	GET_CONF_STR(pktout_mode, pktout_mode);
 	GET_CONF_STR(sched_sync, sched_sync);
@@ -279,6 +280,7 @@ void ofp_initialize_param_from_file(ofp_initialize_param_t *params,
 	memset(params, 0, sizeof(*params));
 	params->instance = OFP_ODP_INSTANCE_INVALID;
 	params->if_sp_mgmt = 1;
+	params->if_sp_offset = 0;
 	params->pktin_mode = ODP_PKTIN_MODE_SCHED;
 	params->pktout_mode = ODP_PKTIN_MODE_DIRECT;
 	params->sched_sync = ODP_SCHED_SYNC_ATOMIC;

@@ -144,6 +144,15 @@ typedef struct ofp_initialize_param_t {
 	odp_bool_t if_sp_mgmt;
 
 	/**
+	 * Slow path interface name offset. Slow path interface name for a
+	 * network interface is composed from a fix part "sp" and a variable
+	 * part formed from interface name offset + interface index e.g. "sp0".
+	 *
+	 * Default value is 0.
+	 */
+	uint16_t if_sp_offset;
+
+	/**
 	 * Packet input mode of the interfaces initialized by OFP.
 	 * Must be ODP_PKTIN_MODE_SCHED if default_event_dispatcher()
 	 * is used.

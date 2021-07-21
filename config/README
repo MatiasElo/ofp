@@ -34,7 +34,10 @@ ofp_global_param: {
 
     linux_core_id = integer
 
-	if_sp_mgmt = boolean
+    if_sp_mgmt = boolean
+
+    if_sp_offset = integer
+
     pktin_mode = "direct" | "sched" | "queue" | "disabled"
     pktout_mode = "direct" | "queue" | "tm" | "disabled"
     sched_sync = "parallel" | "atomic" | ordered"
@@ -145,6 +148,11 @@ if_sp_mgmt: Enable/disable slow path interface management of the interfaces
 created during OFP initialization. That is create/configure/destroy of the SP
 interfaces.
 	Default value is enable (1).
+
+if_sp_offset: Slow path interface name offset. Slow path interface name for a
+network interface is composed from a fix part "sp" and a variable part formed
+from interface name offset + interface index e.g. "sp0".
+	Default value is 0.
 
 pktin_mode: Packet input mode of the interfaces initialized by OFP.
 	Default value is ODP_PKTIN_MODE_SCHED.
