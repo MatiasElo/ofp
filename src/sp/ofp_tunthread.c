@@ -86,17 +86,20 @@ int sp_setup_device(struct ofp_ifnet *ifnet)
 	int fd;
 	struct ifreq ifr;
 	int gen_fd;
-	char fp_name[IFNAMSIZ];
+	char sp_name[IFNAMSIZ];
 	struct sockaddr hwaddr;
 
 	memset(&hwaddr, 0x0, sizeof(hwaddr));
 
 	/* Prepare FP device name*/
-	snprintf(fp_name, IFNAMSIZ, "fp%d", ifnet->port);
-	fp_name[IFNAMSIZ - 1] = 0;
+	strncpy(sp_name,
+		ofp_ifport_port_subport_to_sp_name(ifnet->port,
+						   OFP_IFPORT_NET_SUBPORT_ITF),
+						   IFNAMSIZ - 1);
+	sp_name[IFNAMSIZ - 1] = 0;
 
 	/* Create device */
-	fd = tap_alloc(fp_name, IFF_TAP  | IFF_NO_PI);
+	fd = tap_alloc(sp_name, IFF_TAP  | IFF_NO_PI);
 	if (fd < 0) {
 		OFP_ERR("tap_alloc failed");
 		return -1;
@@ -107,12 +110,12 @@ int sp_setup_device(struct ofp_ifnet *ifnet)
 
 	/* Set the same MAC address as reported by ODP */
 	memset(&ifr, 0x0, sizeof(ifr));
-	strncpy(ifr.ifr_name, fp_name, IFNAMSIZ);
+	strncpy(ifr.ifr_name, sp_name, IFNAMSIZ);
 	ifr.ifr_name[IFNAMSIZ - 1] = 0;
 	memcpy(&ifr.ifr_hwaddr, &hwaddr, sizeof(ifr.ifr_hwaddr));
 
-	OFP_DBG("Fastpath device %s addr %s",
-		  fp_name, ofp_print_mac((uint8_t *)ifr.ifr_hwaddr.sa_data));
+	OFP_DBG("Slowpath device %s addr %s", sp_name,
+		ofp_print_mac((uint8_t *)ifr.ifr_hwaddr.sa_data));
 
 	/* Setting HW address of FP kernel representation */
 	if (ioctl(fd, SIOCSIFHWADDR, &ifr) < 0) {
@@ -125,10 +128,10 @@ int sp_setup_device(struct ofp_ifnet *ifnet)
 
 	/* Setting MTU of FP kernel representation */
 	memset(&ifr, 0x0, sizeof(ifr));
-	strncpy(ifr.ifr_name, fp_name, IFNAMSIZ);
+	strncpy(ifr.ifr_name, sp_name, IFNAMSIZ);
 	ifr.ifr_name[IFNAMSIZ - 1] = 0;
 	ifr.ifr_mtu = ifnet->if_mtu;
-	OFP_DBG("Fastpath device %s MTU %i", fp_name, ifr.ifr_mtu);
+	OFP_DBG("Fastpath device %s MTU %i", sp_name, ifr.ifr_mtu);
 
 	if (ioctl(gen_fd, SIOCSIFMTU, &ifr) < 0) {
 		OFP_ERR("Failed to set MTU: %s", strerror(errno));
@@ -139,7 +142,7 @@ int sp_setup_device(struct ofp_ifnet *ifnet)
 
 	/* Get flags */
 	memset(&ifr, 0x0, sizeof(ifr));
-	strncpy(ifr.ifr_name, fp_name, IFNAMSIZ);
+	strncpy(ifr.ifr_name, sp_name, IFNAMSIZ);
 	ifr.ifr_name[IFNAMSIZ - 1] = 0;
 	if (ioctl(gen_fd, SIOCGIFFLAGS, &ifr) < 0) {
 		OFP_ERR("Failed to get interface flags: %s", strerror(errno));
@@ -163,7 +166,7 @@ int sp_setup_device(struct ofp_ifnet *ifnet)
 
 	/* Get interface index */
 	memset(&ifr, 0x0, sizeof(ifr));
-	strncpy(ifr.ifr_name, fp_name, IFNAMSIZ);
+	strncpy(ifr.ifr_name, sp_name, IFNAMSIZ);
 	ifr.ifr_name[IFNAMSIZ - 1] = 0;
 	if (ioctl(gen_fd, SIOCGIFINDEX, &ifr) < 0) {
 		OFP_ERR("Failed to get interface index: %s", strerror(errno));

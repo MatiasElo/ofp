@@ -420,7 +420,10 @@ int ofp_net_interfaces_destroy(void);
 
 int ofp_destroy_subports(struct ofp_ifnet *ifnet);
 
+/*Converts FP Interface name to port/subport*/
 int ofp_ifport_name_to_port_subport(const char *dev, int *port, int *subport);
+/*Converts port/subport to FP Interface name */
 char *ofp_ifport_port_subport_to_name(int port, int subport);
+/*Converts port/subport to SP Interface name */
 char *ofp_ifport_port_subport_to_sp_name(int port, int subport);
 #endif
