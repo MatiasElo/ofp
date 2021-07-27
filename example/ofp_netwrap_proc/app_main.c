@@ -11,12 +11,15 @@
 #include <sys/socket.h>
 
 #include "ofp.h"
+#include "cli_arg_parse.h"
 
 #define MAX_WORKERS		32
 
 #define ENV_ARG "OFP_NETWRAP_ENV"
 #define ENV_ARG_TKN_NUMBER_MAX 101
 
+#define NETWRAP_APP_NAME "ofp_netwrap"
+#define NETWRAP_APP_NAME_SIZE 12
 /**
  * Get rid of path in filename - only for unix-type paths using '/'
  */
@@ -28,8 +31,7 @@
  */
 typedef struct {
 	int core_count;
-	int if_count;		/**< Number of interfaces to be used */
-	char **if_names;	/**< Array of pointers to interface names */
+	appl_arg_ifs_t itf_param;
 	char *cli_file;
 } appl_args_t;
 
@@ -45,9 +47,12 @@ enum netwrap_state_enum {
  * helper funcs
  */
 static int parse_env(appl_args_t *appl_args);
+static int parse_args(int argc, char *argv[], appl_args_t *appl_args);
+static void parse_args_cleanup(appl_args_t *appl_args);
+static int configure_interface_addresses(appl_arg_ifs_t *itf_param);
 static void print_info(const char *progname, appl_args_t *appl_args,
 		       odp_cpumask_t *cpumask);
-static void usage(char *progname);
+static void usage(void);
 
 static enum netwrap_state_enum netwrap_state;
 static ofp_thread_t thread_tbl[MAX_WORKERS];
@@ -64,6 +69,7 @@ __attribute__((constructor)) static void ofp_netwrap_main_ctor(void)
 	int ret_val, i;
 	odp_cpumask_t cpumask_workers;
 
+	netwrap_state = NETWRAP_UNINT;
 	memset(&params, 0, sizeof(params));
 	if (parse_env(&params) != EXIT_SUCCESS)
 		return;
@@ -76,6 +82,7 @@ __attribute__((constructor)) static void ofp_netwrap_main_ctor(void)
 	 */
 	if (odp_init_global(&netwrap_proc_instance, NULL, NULL)) {
 		printf("Error: ODP global init failed.\n");
+		parse_args_cleanup(&params);
 		return;
 	}
 	netwrap_state = NETWRAP_ODP_INIT_GLOBAL;
@@ -87,6 +94,7 @@ __attribute__((constructor)) static void ofp_netwrap_main_ctor(void)
 	 */
 	if (odp_init_local(netwrap_proc_instance, ODP_THREAD_CONTROL) != 0) {
 		printf("Error: ODP local init failed.\n");
+		parse_args_cleanup(&params);
 		ofp_netwrap_main_dtor();
 		return;
 	}
@@ -102,9 +110,11 @@ __attribute__((constructor)) static void ofp_netwrap_main_ctor(void)
 	 */
 	ofp_initialize_param(&app_init_params);
 	app_init_params.cli.os_thread.start_on_init = 1;
-	app_init_params.if_count = params.if_count;
-	for (i = 0; i < params.if_count && i < OFP_FP_INTERFACE_MAX; i++) {
-		strncpy(app_init_params.if_names[i], params.if_names[i],
+	app_init_params.if_count = params.itf_param.if_count;
+	for (i = 0; i < params.itf_param.if_count &&
+	     i < OFP_FP_INTERFACE_MAX; i++) {
+		strncpy(app_init_params.if_names[i],
+			params.itf_param.if_array[i].if_name,
 			OFP_IFNAMSIZ);
 		app_init_params.if_names[i][OFP_IFNAMSIZ - 1] = '\0';
 	}
@@ -112,6 +122,7 @@ __attribute__((constructor)) static void ofp_netwrap_main_ctor(void)
 
 	if (ofp_initialize(&app_init_params) != 0) {
 		printf("Error: OFP global init failed.\n");
+		parse_args_cleanup(&params);
 		ofp_netwrap_main_dtor();
 		return;
 	}
@@ -124,13 +135,14 @@ __attribute__((constructor)) static void ofp_netwrap_main_ctor(void)
 					   &cpumask_workers)) {
 		OFP_ERR("Error: Failed to get the default workers to cores "
 			"distribution\n");
+		parse_args_cleanup(&params);
 		ofp_netwrap_main_dtor();
 		return;
 	}
 	num_workers = odp_cpumask_count(&cpumask_workers);
 
 	/* Print both system and application information */
-	print_info("ofp_netwrap", &params, &cpumask_workers);
+	print_info(NETWRAP_APP_NAME, &params, &cpumask_workers);
 
 	netwrap_state = NETWRAP_OFP_INIT_GLOBAL;
 
@@ -139,11 +151,8 @@ __attribute__((constructor)) static void ofp_netwrap_main_ctor(void)
 	 * according to the cpumask, thread_tbl will be populated with the
 	 * created pthread IDs.
 	 *
-	 * In this case, all threads will run the default_event_dispatcher
+	 * In this example, all threads will run the default_event_dispatcher
 	 * function with ofp_eth_vlan_processing as argument.
-	 *
-	 * If different dispatchers should run, or the same be run with differnt
-	 * input arguments, the cpumask is used to control this.
 	 */
 	memset(thread_tbl, 0, sizeof(thread_tbl));
 	ofp_thread_param_init(&thread_param);
@@ -160,21 +169,37 @@ __attribute__((constructor)) static void ofp_netwrap_main_ctor(void)
 		ofp_stop_processing();
 		if (ret_val != -1)
 			ofp_thread_join(thread_tbl, ret_val);
+		parse_args_cleanup(&params);
 		ofp_netwrap_main_dtor();
 		return;
 	}
 	netwrap_state = NETWRAP_WORKERS_STARTED;
 
-
-	/*
-	 * Now when the ODP dispatcher threads are running, further applications
-	 * can be launched, in this case, we will process the CLI commands file
-	 */
-	if (ofp_cli_process_file(params.cli_file)) {
-		OFP_ERR("Error: Failed to process CLI file");
+	/* Configure IP addresses */
+	if (configure_interface_addresses(&params.itf_param)) {
+		OFP_ERR("Error: Failed to configure addresses");
+		ofp_stop_processing();
+		ofp_thread_join(thread_tbl, num_workers);
+		parse_args_cleanup(&params);
 		ofp_netwrap_main_dtor();
 		return;
 	}
+
+	/*
+	 * Process the CLI commands file (if defined).
+	 * This is an alternative way to set the IP addresses and other
+	 * parameters.
+	 */
+	if (ofp_cli_process_file(params.cli_file)) {
+		OFP_ERR("Error: Failed to process CLI file");
+		ofp_stop_processing();
+		ofp_thread_join(thread_tbl, num_workers);
+		parse_args_cleanup(&params);
+		ofp_netwrap_main_dtor();
+		return;
+	}
+
+	parse_args_cleanup(&params);
 
 	sleep(1);
 
@@ -220,11 +245,9 @@ static void ofp_netwrap_main_dtor(void)
  */
 static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 {
-	int opt;
+	int opt, res;
 	int long_index;
-	char *names, *str, *token, *save;
 	size_t len;
-	int i;
 	static struct option longopts[] = {
 		{"count", required_argument, NULL, 'c'},
 		{"interface", required_argument, NULL, 'i'},	/* return 'i' */
@@ -249,62 +272,33 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 			break;
 			/* parse packet-io interface names */
 		case 'i':
-			len = strlen(optarg);
-			if (len == 0) {
-				usage(argv[0]);
+			res = ofpexpl_parse_interfaces(optarg,
+						       &appl_args->itf_param);
+			if (res == EXIT_FAILURE) {
+				usage();
+				parse_args_cleanup(appl_args);
 				return EXIT_FAILURE;
-			}
-			len += 1;	/* add room for '\0' */
-
-			names = malloc(len);
-			if (names == NULL) {
-				usage(argv[0]);
-				return EXIT_FAILURE;
-			}
-
-			/* count the number of tokens separated by ',' */
-			strcpy(names, optarg);
-			for (str = names, i = 0;; str = NULL, i++) {
-				token = strtok_r(str, ",", &save);
-				if (token == NULL)
-					break;
-			}
-			appl_args->if_count = i;
-
-			if (appl_args->if_count == 0) {
-				usage(argv[0]);
-				return EXIT_FAILURE;
-			}
-
-			/* allocate storage for the if names */
-			appl_args->if_names =
-				calloc(appl_args->if_count, sizeof(char *));
-
-			/* store the if names (reset names string) */
-			strcpy(names, optarg);
-			for (str = names, i = 0;; str = NULL, i++) {
-				token = strtok_r(str, ",", &save);
-				if (token == NULL)
-					break;
-				appl_args->if_names[i] = token;
 			}
 			break;
 
 		case 'h':
-			usage(argv[0]);
+			usage();
+			parse_args_cleanup(appl_args);
 			return EXIT_FAILURE;
 
 		case 'f':
 			len = strlen(optarg);
 			if (len == 0) {
-				usage(argv[0]);
+				usage();
+				parse_args_cleanup(appl_args);
 				return EXIT_FAILURE;
 			}
 			len += 1;	/* add room for '\0' */
 
 			appl_args->cli_file = malloc(len);
 			if (appl_args->cli_file == NULL) {
-				usage(argv[0]);
+				usage();
+				parse_args_cleanup(appl_args);
 				return EXIT_FAILURE;
 			}
 
@@ -316,8 +310,9 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 		}
 	}
 
-	if (appl_args->if_count == 0) {
-		usage(argv[0]);
+	if (appl_args->itf_param.if_count == 0) {
+		usage();
+		parse_args_cleanup(appl_args);
 		return EXIT_FAILURE;
 	}
 
@@ -326,11 +321,20 @@ static int parse_args(int argc, char *argv[], appl_args_t *appl_args)
 	return EXIT_SUCCESS;
 }
 
+/**
+ * Cleanup cli parameters
+ */
+static void parse_args_cleanup(appl_args_t *appl_args)
+{
+	ofpexpl_parse_interfaces_param_cleanup(&appl_args->itf_param);
+}
+
 static int parse_env(appl_args_t *appl_args)
 {
 	char *netwrap_env;
 	char *netwrap_env_temp;
 	char *argv[ENV_ARG_TKN_NUMBER_MAX];
+	char app_name[NETWRAP_APP_NAME_SIZE + 1];
 	int argc = 0;
 
 	netwrap_env = getenv(ENV_ARG);
@@ -339,7 +343,8 @@ static int parse_env(appl_args_t *appl_args)
 
 	netwrap_env = strdup(netwrap_env);
 
-	argv[argc++] = NULL;
+	strcpy(app_name, NETWRAP_APP_NAME);
+	argv[argc++] = app_name;
 	netwrap_env_temp = strtok(netwrap_env, " \0");
 	while (netwrap_env_temp && argc < ENV_ARG_TKN_NUMBER_MAX) {
 		argv[argc++] = netwrap_env_temp;
@@ -380,9 +385,9 @@ static void print_info(const char *progname, appl_args_t *appl_args,
 		   "-----------------\n"
 		   "IF-count:        %i\n"
 		   "Using IFs:      ",
-		   progname, appl_args->if_count);
-	for (i = 0; i < appl_args->if_count; ++i)
-		printf(" %s", appl_args->if_names[i]);
+		   progname, appl_args->itf_param.if_count);
+	for (i = 0; i < appl_args->itf_param.if_count; ++i)
+		printf(" %s", appl_args->itf_param.if_array[i].if_name);
 	printf("\n\n");
 
 	/* Print worker to core distribution */
@@ -402,21 +407,94 @@ static void print_info(const char *progname, appl_args_t *appl_args,
 /**
  * Prinf usage information
  */
-static void usage(char *progname)
+static void usage(void)
 {
 	printf("\n"
-		   "Usage: %s OPTIONS\n"
-		   "  E.g. %s -i eth1,eth2,eth3\n"
-		   "\n"
-		   "ODPFastpath application.\n"
+		   "Usage:\n"
+		   "    export %s=\"OPTIONS\"\n"
+		   "    ofp_netwrap.sh <application full path>\n"
+		   "  E.g.:\n"
+		   "    export %s=\"-i eth1@192.168.100.10/24\"\n"
+		   "    ofp_netwrap.sh /tmp/in_udp\n"
+		   ""
 		   "\n"
 		   "Mandatory OPTIONS:\n"
-		   "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
+		   "  -i, --interface <interfaces> Ethernet interface list"
+		   " (comma-separated, no spaces)\n"
+		   "  Example:\n"
+		   "    eth1,eth2\n"
+		   "    eth1@192.168.100.10/24,eth2@172.24.200.10/16\n"
 		   "\n"
 		   "Optional OPTIONS\n"
 		   "  -c, --count <number> Core count.\n"
 		   "  -h, --help           Display help and exit.\n"
-		   "\n", NO_PATH(progname), NO_PATH(progname)
-		);
+		   "\n", ENV_ARG, ENV_ARG);
 }
 
+/**
+ * Configure IPv4 addresses
+ *
+ * @param itf_param appl_arg_ifs_t Interfaces to configure
+ * @return int 0 on success, -1 on error
+ *
+ */
+static int configure_interface_addresses(appl_arg_ifs_t *itf_param)
+{
+	struct appl_arg_if *ifarg = NULL;
+	ofp_ifnet_t ifnet = OFP_IFNET_INVALID;
+	uint32_t addr = 0;
+	int port = 0;
+	uint16_t subport = 0;
+	int i, ret = 0;
+	const char *res = NULL;
+
+	for (i = 0; i < itf_param->if_count && i < OFP_FP_INTERFACE_MAX; i++) {
+		ifarg = &itf_param->if_array[i];
+
+		if (!ifarg->if_name) {
+			OFP_ERR("Error: Invalid interface name: null");
+			ret = -1;
+			break;
+		}
+
+		if (!ifarg->if_address)
+			continue; /* Not set through application parameters*/
+
+		OFP_DBG("Setting %s/%d on %s", ifarg->if_address,
+			ifarg->if_address_masklen, ifarg->if_name);
+
+		ifnet = ofp_ifport_net_ifnet_get_by_name(ifarg->if_name);
+		if (ifnet == OFP_IFNET_INVALID) {
+			OFP_ERR("Error: interface not found: %s",
+				ifarg->if_name);
+			ret = -1;
+			break;
+		}
+
+		if (ofp_ifnet_port_get(ifnet, &port, &subport)) {
+			OFP_ERR("Error: Failed to get <port, sub-port>: %s",
+				ifarg->if_name);
+			ret = -1;
+			break;
+		}
+
+		if (!ofp_parse_ip_addr(ifarg->if_address, &addr)) {
+			OFP_ERR("Error: Failed to parse IPv4 address: %s",
+				ifarg->if_address);
+			ret = -1;
+			break;
+		}
+
+		res = ofp_ifport_net_ipv4_up(port, subport, 0, addr,
+					     ifarg->if_address_masklen, 1);
+		if (res != NULL) {
+			OFP_ERR("Error: Failed to set IPv4 address %s "
+				"on interface %s: %s",
+				ifarg->if_address, ifarg->if_name, res);
+			ret = -1;
+			break;
+		}
+	}
+
+	return ret;
+}
