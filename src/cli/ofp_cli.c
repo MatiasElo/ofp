@@ -75,6 +75,9 @@ static void cli_send_welcome_banner(ofp_print_t *pr)
 		  "--==--==--==--==--==--==--\r\n"
 		  "-- WELCOME to OFP CLI --\r\n"
 		  "--==--==--==--==--==--==--\r\n"
+		  "\r\n"
+		  " Type 'help' for information on "
+		  "available commands...\r\n"
 		  );
 }
 
@@ -101,11 +104,32 @@ void f_exit(ofp_print_t *pr, const char *s)
 static void f_help(ofp_print_t *pr, const char *s)
 {
 	(void)s;
-	ofp_print(pr, "Display help information for CLI commands:\r\n"
+	ofp_print(pr, "Use 'help' command to display information "
+		"on CLI commands:\r\n"
 		"  help <command>\r\n"
 		"    command: alias, address, arp, debug, exit, ifconfig, ");
 	ofp_print(pr, "ipsec, loglevel, netstat, ping, route, show,");
 	ofp_print(pr, " shutdown, stat, sysctl\r\n\r\n");
+
+	ofp_print(pr, "Commands summary:\r\n"
+			  "-----------------\r\n"
+			  "alias    : configures command aliasses\r\n"
+			  "address  : configures additional IPv4 addresses on an interface\r\n"
+			  "arp      : configures ARP entries\r\n"
+			  "debug    : configures packet capture and printing options\r\n"
+			  "exit     : closes the CLI connection\r\n"
+			  "ifconfig : configures interfaces\r\n"
+			  "ipsec    : configures IPsec SA and SP\r\n"
+			  "loglevel : configures log level\r\n"
+			  "netstat  : prints network connections\r\n"
+			  "ping     : pings IPv4/IPv6 addresses\r\n"
+			  "route    : configures routes\r\n"
+			  "show     : displays status of OFP components "
+			  "(e.g arp, root) \r\n"
+			  "shutdown : shutdown OFP\r\n"
+			  "stat     : shows statistics \r\n"
+			  "sysctl   : configures system parameters\r\n\r\n"
+			  );
 }
 
 static void f_help_exit(ofp_print_t *pr, const char *s)
