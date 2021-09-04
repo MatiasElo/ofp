@@ -61,15 +61,22 @@
  */
 
 #include "ofpi.h"
+#include "ofpi_icmp_shm.h"
+#include "ofpi_socketvar.h"
+#include "ofpi_sockstate.h"
 #include "ofpi_log.h"
 #include "ofpi_util.h"
+#include "ofpi_errno.h"
 #include "ofpi_protosw.h"
 #include "ofpi_route.h"
 #include "ofpi_ip6.h"
 #include "ofpi_ip6_var.h"
+#include "ofpi_in6_pcb.h"
 #include "ofpi_ip6protosw.h"
 #include "ofpi_icmp6.h"
 #include "ofpi_pkt_processing.h"
+
+#define OFP_ICMP6_ECHO_HEADER_LEN 8
 
 #if 0
 #include <sys/cdefs.h>
@@ -156,7 +163,10 @@ static int ni6_store_addrs __P((struct icmp6_nodeinfo *, struct icmp6_nodeinfo *
 				struct ifnet *, int));
 #endif /* 0*/
 static int icmp6_notify_error(odp_packet_t, int, int, int);
-
+static enum ofp_return_code
+icmp6_socket_input(odp_packet_t pkt,
+		   struct ofp_ip6_hdr *ip6,
+		   struct ofp_icmp6_hdr *icmp6);
 
 
 #if 0
@@ -472,6 +482,8 @@ ofp_icmp6_input(odp_packet_t *m, int *offp, int *nxt)
 		goto freeit;
 	}
 
+	odp_packet_l4_offset_set(*m, odp_packet_l3_offset(*m) + off);
+
 	code = icmp6->icmp6_code;
 
 	sum = ofp_in6_cksum(*m, OFP_IPPROTO_ICMPV6, off, icmp6len);
@@ -589,7 +601,7 @@ ofp_icmp6_input(odp_packet_t *m, int *offp, int *nxt)
 		if (code != 0)
 			goto badcode;
 
-		return OFP_PKT_PROCESSED;
+		return icmp6_socket_input(*m, ip6, icmp6);
 #if 0
 	case MLD_LISTENER_QUERY:
 	case MLD_LISTENER_REPORT:
@@ -2784,3 +2796,489 @@ icmp6_ratelimit(const struct in6_addr *dst, const int type,
 }
 
 #endif
+
+static int
+icmp6_attach(struct socket *so, int proto, struct thread *td)
+{
+	struct inpcb *inp;
+	int error;
+
+	(void)proto;
+	(void)td;
+
+	inp = sotoinpcb(so);
+	KASSERT(inp == NULL, ("%s: inp != NULL", __func__));
+
+	/* Constant space reserved. ??
+	if (so->so_snd.sb_hiwat == 0 || so->so_rcv.sb_hiwat == 0) {
+		error = soreserve(so, udp_sendspace, udp_recvspace);
+		if (error)
+			return error;
+	}*/
+
+	INP_INFO_WLOCK(&V_icmbinfo);
+
+	error = ofp_in_pcballoc(so, &V_icmbinfo);
+	if (error) {
+		INP_INFO_WUNLOCK(&V_icmbinfo);
+		return error;
+	}
+
+	inp = (struct inpcb *)so->so_pcb;
+	inp->inp_vflag |= INP_IPV6;
+	if ((inp->inp_flags & IN6P_IPV6_V6ONLY) == 0)
+		inp->inp_vflag |= INP_IPV4;
+
+	inp->in6p_hops = V_ip6_defhlim;
+	inp->in6p_cksum = -1;	/* just to be sure */
+	/*
+	 * XXX: ugly!!
+	 * IPv4 TTL initialization is necessary for an IPv6 socket as well,
+	 * because the socket may be bound to an IPv6 wildcard address,
+	 * which may match an IPv4-mapped IPv6 address.
+	 */
+	inp->inp_ip_ttl = V_ip_defttl;
+
+	inp->ppcb_space.icmp_ppcb.u_seq = 0;
+	inp->ppcb_space.icmp_ppcb.send_timestamp = 0;
+	inp->inp_ppcb = &inp->ppcb_space.icmp_ppcb;
+
+	INP_WUNLOCK(inp);
+	INP_INFO_WUNLOCK(&V_icmbinfo);
+
+	return 0;
+}
+
+static void
+icmp6_close(struct socket *so)
+{
+	struct inpcb *inp;
+
+	inp = sotoinpcb(so);
+	KASSERT(inp != NULL, ("%s: inp == NULL", __func__));
+
+	if (inp->inp_vflag & INP_IPV4) {
+		struct pr_usrreqs *pru;
+
+		pru = ofp_inetsw[ofp_ip_protox[OFP_IPPROTO_ICMP]].pr_usrreqs;
+		(*pru->pru_disconnect)(so);
+		return;
+	}
+
+	INP_WLOCK(inp);
+	if (!OFP_IN6_IS_ADDR_UNSPECIFIED(&inp->in6p_faddr)) {
+		INP_HASH_WLOCK(&V_icmbinfo);
+		ofp_in6_pcbdisconnect(inp);
+		inp->in6p_laddr = ofp_in6addr_any;
+		INP_HASH_WUNLOCK(&V_icmbinfo);
+		ofp_soisdisconnected(so);
+	}
+	INP_WUNLOCK(inp);
+}
+
+static void
+icmp6_detach(struct socket *so)
+{
+	struct inpcb *inp;
+	struct icmpcb *icmpp;
+
+	inp = sotoinpcb(so);
+	KASSERT(inp != NULL, ("%s: inp == NULL", __func__));
+
+	INP_INFO_WLOCK(&V_icmbinfo);
+	INP_WLOCK(inp);
+	icmpp = intoicmpcb(inp);
+	KASSERT(icmpp != NULL, ("%s: icmpp == NULL", __func__));
+	ofp_in_pcbdetach(inp);
+	ofp_in_pcbfree(inp);
+	INP_INFO_WUNLOCK(&V_icmbinfo);
+}
+
+static int
+icmp6_connect(struct socket *so, struct ofp_sockaddr *nam, struct thread *td)
+{
+	struct inpcb *inp;
+	struct ofp_sockaddr_in6 *sin6;
+	int error = 0;
+
+	inp = sotoinpcb(so);
+	sin6 = (struct ofp_sockaddr_in6 *)nam;
+	KASSERT(inp != NULL, ("%s: inp == NULL", __func__));
+
+	(void)td;
+
+	/*
+	 * XXXRW: Need to clarify locking of v4/v6 flags.
+	 */
+	INP_WLOCK(inp);
+
+	if (OFP_IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
+		struct ofp_sockaddr_in sin;
+
+		if ((inp->inp_flags & IN6P_IPV6_V6ONLY) != 0) {
+			error = OFP_EINVAL;
+			goto out;
+		}
+		if (inp->inp_faddr.s_addr != OFP_INADDR_ANY) {
+			error = OFP_EISCONN;
+			goto out;
+		}
+		ofp_in6_sin6_2_sin(&sin, sin6);
+		inp->inp_vflag |= INP_IPV4;
+		inp->inp_vflag &= ~INP_IPV6;
+#if 0
+		error = prison_remote_ip4(td->td_ucred, &sin.sin_addr);
+		if (error != 0)
+			goto out;
+#endif /* 0 */
+
+		inp->inp_lport = 0;
+		inp->inp_laddr.s_addr = OFP_INADDR_ANY;
+		inp->inp_faddr.s_addr = sin.sin_addr.s_addr;
+		inp->inp_fport = sin.sin_port;
+
+		if (error == 0)
+			ofp_soisconnected(so);
+		goto out;
+	}
+
+	if (!OFP_IN6_IS_ADDR_UNSPECIFIED(&inp->in6p_faddr)) {
+		error = OFP_EISCONN;
+		goto out;
+	}
+	inp->inp_vflag &= ~INP_IPV4;
+	inp->inp_vflag |= INP_IPV6;
+#if 0
+	error = prison_remote_ip6(td->td_ucred, &sin6->sin6_addr);
+	if (error != 0)
+		goto out;
+#endif
+
+	inp->inp_lport = 0;
+	inp->in6p_laddr = ofp_in6addr_any;
+	inp->in6p_faddr = sin6->sin6_addr;
+	inp->inp_fport = sin6->sin6_port;
+
+	if (inp->inp_flags & IN6P_AUTOFLOWLABEL)
+		inp->inp_flow |=
+		    (odp_cpu_to_be_32(ofp_ip6_randomflowlabel()) &
+		    OFP_IPV6_FLOWLABEL_MASK);
+
+	if (error == 0)
+		ofp_soisconnected(so);
+
+out:
+	INP_WUNLOCK(inp);
+	return error;
+}
+
+static int
+icmp6_disconnect(struct socket *so)
+{
+	struct inpcb *inp;
+
+	inp = sotoinpcb(so);
+	KASSERT(inp != NULL, ("%s: inp == NULL", __func__));
+
+	if (inp->inp_vflag & INP_IPV4) {
+		struct pr_usrreqs *pru;
+
+		pru = ofp_inetsw[ofp_ip_protox[OFP_IPPROTO_UDP]].pr_usrreqs;
+		(void)(*pru->pru_disconnect)(so);
+		return 0;
+	}
+
+	INP_WLOCK(inp);
+
+	if (OFP_IN6_IS_ADDR_UNSPECIFIED(&inp->in6p_faddr)) {
+		INP_WUNLOCK(inp);
+		return OFP_ENOTCONN;
+	}
+
+	inp->in6p_laddr = ofp_in6addr_any;
+	inp->in6p_faddr = ofp_in6addr_any;
+
+	OFP_SOCK_LOCK(so);
+	so->so_state &= ~SS_ISCONNECTED;		/* XXX */
+	OFP_SOCK_UNLOCK(so);
+	INP_WUNLOCK(inp);
+	return 0;
+}
+
+static int
+icmp6_sosend(struct socket *so, struct ofp_sockaddr *addr, struct uio *uio,
+	     odp_packet_t top, odp_packet_t control, int flags,
+	     struct thread *td)
+{
+	int error = 0;
+	struct inpcb *inp = NULL;
+	struct icmpcb *icmpp = NULL;
+	const uint8_t *data;
+	ofp_ssize_t resid;
+	odp_packet_t pkt = ODP_PACKET_INVALID;
+	uint16_t pkt_len = 0;
+	uint16_t plen = 0;
+	struct ofp_ip6_hdr *ip6 = NULL;
+	struct ofp_icmp6_hdr *icmp6 = NULL;
+	struct ofp_in6_addr out_addr = {0};
+	uint16_t out_id = 0;
+	struct ofp_ifnet *outif = NULL;
+	struct ofp_nh6_entry *nh6 = NULL;
+
+	(void)control;
+	(void)flags;
+	(void)td;
+
+	KASSERT(so->so_type == OFP_SOCK_RAW, ("%s: !OFP_SOCK_RAW", __func__));
+	KASSERT(so->so_proto->pr_flags & PR_ATOMIC,
+		("%s: !PR_ATOMIC", __func__));
+
+	inp = sotoinpcb(so);
+	icmpp = intoicmpcb(inp);
+
+	if (uio != NULL) {
+		data = uio->uio_iov->iov_base;
+		resid = uio->uio_iov->iov_len;
+	} else {
+		data = odp_packet_data(top);
+		resid = odp_packet_len(top);
+	}
+
+	if (addr) {
+		out_addr = ((struct ofp_sockaddr_in6 *)addr)->sin6_addr;
+		out_id = ((struct ofp_sockaddr_in6 *)addr)->sin6_port;
+	} else {
+		out_addr = inp->in6p_faddr;
+		out_id = inp->inp_fport;
+	}
+
+	if (resid < (ofp_ssize_t)(sizeof(struct ofp_icmpdata))) {
+		OFP_ERR("ICMP data should be at least %ld bytes in length",
+			sizeof(struct ofp_icmpdata));
+		error = OFP_EINVAL;
+		goto out;
+	}
+
+/*
+       0                   1                   2                   3
+       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |     Type      |     Code      |          Checksum             |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |           Identifier          |        Sequence Number        |
+      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      |     Data ...
+      +-+-+-+-+-
+*/
+
+	plen = OFP_ICMP6_ECHO_HEADER_LEN + (uint16_t)resid;
+	pkt_len = sizeof(struct ofp_ether_vlan_header) +
+		sizeof(struct ofp_ip6_hdr) + plen;
+
+	pkt = ofp_socket_packet_alloc(pkt_len);
+
+	if (pkt == ODP_PACKET_INVALID) {
+		error = OFP_ENOMEM;
+		goto out;
+	}
+
+	odp_packet_l2_offset_set(pkt, 0);
+	odp_packet_l3_offset_set(pkt, sizeof(struct ofp_ether_vlan_header));
+
+	ip6 = (struct ofp_ip6_hdr *)odp_packet_l3_ptr(pkt, NULL);
+
+	ip6->ofp_ip6_flow = inp->inp_flow & OFP_IPV6_FLOWINFO_MASK;
+	ip6->ofp_ip6_vfc	= 0;
+	ip6->ofp_ip6_vfc	&= ~OFP_IPV6_VERSION_MASK;
+	ip6->ofp_ip6_vfc	|= OFP_IPV6_VERSION;
+	ip6->ofp_ip6_plen	= odp_cpu_to_be_16(plen);
+	ip6->ofp_ip6_nxt	= OFP_IPPROTO_ICMPV6;
+	ip6->ofp_ip6_hlim	= inp->in6p_hops;
+	ip6->ip6_src  = ofp_in6addr_any;
+	ip6->ip6_dst  = out_addr;
+
+	if (!OFP_IN6_IS_ADDR_MULTICAST(&ip6->ip6_dst)) {
+		nh6 = ofp_get_next_hop6(0, &ip6->ip6_dst.ofp_s6_addr[0], 0);
+		if (nh6) {
+			outif = ofp_get_ifnet(nh6->port, nh6->vlan, 0);
+			memcpy(ip6->ip6_src.ofp_s6_addr, outif->ip6_addr, 16);
+		}
+	}
+
+	icmp6 = (struct ofp_icmp6_hdr *)(ip6 + 1);
+	icmp6->icmp6_type = 128; /* Echo request*/
+	icmp6->icmp6_code = 0;
+	icmp6->ofp_icmp6_id = out_id;
+	icmp6->ofp_icmp6_seq = odp_cpu_to_be_16(++icmpp->u_seq);
+	icmpp->send_timestamp = odp_time_local_ns();
+
+	odp_memcpy((uint8_t *)icmp6 + OFP_ICMP6_ECHO_HEADER_LEN, data, resid);
+
+	icmp6->icmp6_cksum = 0;
+	icmp6->icmp6_cksum = ofp_in6_cksum(pkt, OFP_IPPROTO_ICMPV6,
+					   sizeof(struct ofp_ip6_hdr), plen);
+
+	(void)ofp_ip6_output(pkt, nh6);
+
+out:
+	if (pkt != ODP_PACKET_INVALID) {
+		odp_packet_free(pkt);
+		pkt = ODP_PACKET_INVALID;
+	}
+
+	return error;
+}
+
+static enum ofp_return_code
+icmp6_socket_input(odp_packet_t pkt, struct ofp_ip6_hdr *ip6,
+		   struct ofp_icmp6_hdr *icmp6)
+{
+	enum ofp_return_code ret = OFP_PKT_CONTINUE;
+	struct inpcb *inp = NULL;
+	struct icmpcb *icmpp = NULL;
+	struct inpcbhead *ipi_listhead = NULL;
+	struct ofp_icmpdata *icp_data = NULL;
+	struct socket *so = NULL;
+	odp_bool_t found = 0;
+
+	INP_INFO_RLOCK(&V_icmbinfo);
+
+	ipi_listhead = V_icmbinfo.ipi_listhead;
+
+	OFP_LIST_FOREACH(inp, ipi_listhead, inp_list) {
+		INP_RLOCK(inp);
+
+		if ((inp->inp_vflag & INP_IPV6) != 0  &&
+		    !odp_memcmp(inp->in6p_faddr.ofp_s6_addr,
+				ip6->ip6_src.ofp_s6_addr, 16) &&
+		    inp->inp_fport == icmp6->ofp_icmp6_id) {
+			icmpp = intoicmpcb(inp);
+
+			if (odp_be_to_cpu_16(icmp6->ofp_icmp6_seq) != icmpp->u_seq) {
+				/* Drop late packets */
+				odp_packet_free(pkt);
+				pkt = ODP_PACKET_INVALID;
+			} else {
+				/* Save time diff. between send and receive time
+				in the first 8 bytes of the packet*/
+				icp_data = (struct ofp_icmpdata *)((uint8_t *)icmp6 + OFP_ICMP6_ECHO_HEADER_LEN);
+				icp_data->rtt = odp_time_local_ns() -
+					icmpp->send_timestamp;
+				icp_data->seq = icmpp->u_seq;
+				icp_data->ttl = ip6->ofp_ip6_hlim;
+
+				so = inp->inp_socket;
+
+				SOCKBUF_LOCK(&so->so_rcv);
+				if (ofp_sbappendaddr_locked(&so->so_rcv,
+							    pkt,
+							    ODP_PACKET_INVALID) == 0) {
+					SOCKBUF_UNLOCK(&so->so_rcv);
+					odp_packet_free(pkt);
+					pkt = ODP_PACKET_INVALID;
+				} else {
+					sorwakeup_locked(so);
+				}
+			}
+
+			found = 1;
+			ret = OFP_PKT_PROCESSED;
+		}
+
+		INP_RUNLOCK(inp);
+
+		if (found)
+			break;
+	}
+
+	INP_INFO_RUNLOCK(&V_icmbinfo);
+
+	return ret;
+}
+
+static int
+icmp6_soreceive(struct socket *so, struct ofp_sockaddr **psa, struct uio *uio,
+		odp_packet_t *mp0, odp_packet_t *controlp, int *flagsp)
+{
+	int error = 0;
+	odp_packet_t pkt;
+	struct ofp_ip6_hdr *ip6 = NULL;
+	struct ofp_icmp6_hdr *icmp6 = NULL;
+	uint8_t *icp_data = NULL;
+	uint32_t icp_data_len = 0;
+
+	(void)mp0;
+	(void)controlp;
+	(void)flagsp;
+
+	if (uio->uio_iov->iov_len < sizeof(struct ofp_icmpdata)) {
+		OFP_ERR("ICMP receive data buffer should be at least %ld "
+			"bytes in length", sizeof(uint64_t));
+		return OFP_EINVAL;
+	}
+
+	SOCKBUF_LOCK(&so->so_rcv);
+	while (so->so_rcv.sb_put == so->so_rcv.sb_get) {
+		error = ofp_sbwait(&so->so_rcv);
+		if (error) {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+			return error;
+		}
+	}
+
+	pkt = so->so_rcv.sb_mb[so->so_rcv.sb_get];
+	sbfree(&so->so_rcv, pkt);
+	if (++so->so_rcv.sb_get >= SOCKBUF_LEN)
+		so->so_rcv.sb_get = 0;
+
+	SOCKBUF_UNLOCK(&so->so_rcv);
+
+	ip6 = (struct ofp_ip6_hdr *)odp_packet_l3_ptr(pkt, NULL);
+	icmp6 = (struct ofp_icmp6_hdr *)odp_packet_l4_ptr(pkt, NULL);
+	icp_data = (uint8_t *)icmp6 + OFP_ICMP6_ECHO_HEADER_LEN;
+	icp_data_len = odp_packet_len(pkt) -  odp_packet_l4_offset(pkt) -
+		OFP_ICMP6_ECHO_HEADER_LEN;
+
+	if (icp_data_len > uio->uio_iov->iov_len)
+		icp_data_len = uio->uio_iov->iov_len;
+
+	odp_memcpy(uio->uio_iov->iov_base, icp_data, icp_data_len);
+
+	if (psa && *psa) {
+		struct ofp_sockaddr_in6 *addr = (struct ofp_sockaddr_in6 *)*psa;
+
+		odp_memset(addr, 0, sizeof(struct ofp_sockaddr_in6));
+		odp_memcpy(addr->sin6_addr.ofp_s6_addr,
+			   ip6->ip6_src.ofp_s6_addr, 16);
+		addr->sin6_port = icmp6->ofp_icmp6_id;
+	}
+
+	odp_packet_free(pkt);
+	uio->uio_resid -= icp_data_len;
+	return 0;
+}
+
+struct pr_usrreqs ofp_icmp6_usrreqs = {
+	.pru_attach =		icmp6_attach,
+	.pru_close =		icmp6_close,
+	.pru_detach =		icmp6_detach,
+	.pru_connect =		icmp6_connect,
+	.pru_disconnect =	icmp6_disconnect,
+	.pru_sosend =		icmp6_sosend,
+	.pru_soreceive =	icmp6_soreceive,
+
+	.pru_accept =		ofp_pru_accept_notsupp,
+	.pru_bind =		ofp_pru_bind_notsupp,
+	.pru_connect2 =		ofp_pru_connect2_notsupp,
+	.pru_control =		ofp_pru_control_notsupp,
+	.pru_listen =		ofp_pru_listen_notsupp,
+	.pru_peeraddr =		ofp_pru_peeraddr_notsupp,
+	.pru_rcvd =		ofp_pru_rcvd_notsupp,
+	.pru_rcvoob =		ofp_pru_rcvoob_notsupp,
+	.pru_send =		ofp_pru_send_notsupp,
+	.pru_sense =		ofp_pru_sense_null,
+	.pru_shutdown =		ofp_pru_shutdown_notsupp,
+	.pru_sockaddr =		ofp_pru_sockaddr_notsupp,
+	.pru_sopoll =		ofp_pru_sopoll_notsupp,
+};
+

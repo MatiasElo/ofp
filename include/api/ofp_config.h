@@ -77,6 +77,9 @@
 /**Maximum number of UDP PCBs. */
 #define OFP_NUM_PCB_UDP_MAX 1024
 
+/**Maximum number of ICMP PCBs. */
+#define OFP_NUM_PCB_ICMP_MAX 8
+
 #define OFP_TCP_MAX_CONNECTION_RATE
 
 /** Epoll set size */

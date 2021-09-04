@@ -149,11 +149,11 @@ struct protosw ofp_inetsw[] = {
 		.pr_protocol =		OFP_IPPROTO_ICMP,
 		.pr_flags =		PR_ATOMIC|PR_ADDR|PR_LASTHDR,
 		.pr_input =		ofp_icmp_input,
-		.pr_init =		NULL,
-		.pr_destroy =		NULL,
+		.pr_init =		ofp_icmp_init,
+		.pr_destroy =		ofp_icmp_destroy,
 		.pr_ctlinput =		NULL,
 		.pr_ctloutput =		NULL/*rip_ctloutput*/,
-		.pr_usrreqs =		&nousrreqs
+		.pr_usrreqs =		&ofp_icmp_usrreqs
 	},
 	{
 		.pr_type =		OFP_SOCK_RAW,

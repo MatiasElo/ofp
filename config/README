@@ -106,6 +106,10 @@ ofp_global_param: {
 		pcbport_hashtbl_size = integer
 	}
 
+	icmp: {
+		pcb_icmp_max = integer
+	}
+
 	if_loopback = boolean
 
 	loglevel = "disabled" | "error" | "warning" | "info" | "debug"
@@ -302,6 +306,9 @@ udp.pcb_hashtbl_size: Size of pcb hash.
 udp.pcbport_hashtbl_size: Size of pcbport hash.
 	Must be a power of 2.
 	Default value is computed based on udp.pcb_udp_max
+
+icmp.pcb_icmp_max: Maximum number of ICMP PCBs.
+	Default value is OFP_NUM_PCB_ICMP_MAX.
 
 if_loopback: Create the default loopback interface lo0, 127.0.0.1/8.
 	Default value is 0 (do not create)

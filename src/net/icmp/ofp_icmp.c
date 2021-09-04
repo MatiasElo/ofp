@@ -29,19 +29,26 @@
  *	@(#)ip_icmp.c	8.2 (Berkeley) 1/4/94
  */
 #include "ofpi.h"
+#include "ofpi_icmp_shm.h"
 #include "ofpi_pkt_processing.h"
 #include "ofpi_protosw.h"
 #include "ofpi_socket.h"
+#include "ofpi_sockstate.h"
+#include "ofpi_socketvar.h"
 #include "ofpi_route.h"
 #include "ofpi_ifnet_portconf.h"
 #include "ofpi_log.h"
 #include "ofpi_util.h"
+#include "ofpi_errno.h"
 /* ODP should have support to get time and date like gettimeofday from Linux*/
 #include <sys/time.h>
+#include <inttypes.h>
 /*
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: release/9.1.0/sys/netinet/ip_icmp.c 237913 2012-07-01 09:00:29Z tuexen $");
 */
+
+#define OFP_ICMP_ECHO_HEADER_LEN 8
 
 /*
  * ICMP routines: error generation, receive packet processing, and
@@ -125,6 +132,9 @@ int	icmpprintfs = 0;
 
 static enum ofp_return_code icmp_reflect(odp_packet_t pkt);
 static void	icmp_send(odp_packet_t pkt, struct ofp_nh_entry *nh);
+
+static enum ofp_return_code
+icmp_socket_input(odp_packet_t pkt, struct ofp_ip *ip, struct ofp_icmp *icp);
 
 extern	struct protosw inetsw[];
 
@@ -544,6 +554,9 @@ _ofp_icmp_input(odp_packet_t pkt, struct ofp_ip *ip, struct ofp_icmp *icp,
 	case OFP_ICMP_ECHO:
 		return icmp_echo(pkt, icp, reflect);
 
+	case OFP_ICMP_ECHOREPLY:
+		return icmp_socket_input(pkt, ip, icp);
+
 	case OFP_ICMP_TSTAMP:
 		return icmp_timestamp_request(pkt, icp, icmplen, reflect);
 
@@ -776,3 +789,449 @@ icmp_send(odp_packet_t pkt, struct ofp_nh_entry *nh)
 	(void) ofp_ip_output(pkt, nh);
 }
 
+static int
+icmp_inpcb_init(void *mem, int size, int flags)
+{
+	struct inpcb *inp;
+
+	(void)size;
+	(void)flags;
+
+	inp = mem;
+	INP_LOCK_INIT(inp, "inp", "icmpinp");
+	return 0;
+}
+
+void ofp_icmp_init(void)
+{
+	INP_INFO_LOCK_INIT(&V_icmbinfo, 0);
+
+	ofp_in_pcbinfo_init("icmp",
+			    &V_icmbinfo, &V_icmb,
+			    V_icmp_hashtbl, V_icmp_hashtbl_size,
+			    V_icmp_porthashtbl, V_icmp_porthashtbl_size,
+			    icmp_inpcb_init, NULL, 0,
+			    (uint32_t)global_param->icmp.pcb_icmp_max);
+}
+
+void ofp_icmp_destroy(void)
+{
+	struct inpcb *inp, *inp_temp;
+
+	OFP_LIST_FOREACH_SAFE(inp, V_icmbinfo.ipi_listhead, inp_list,
+			      inp_temp) {
+		if (inp->inp_socket) {
+			ofp_sbdestroy(&inp->inp_socket->so_snd,
+				      inp->inp_socket);
+			ofp_sbdestroy(&inp->inp_socket->so_rcv,
+				      inp->inp_socket);
+		}
+
+		uma_zfree(V_icmbinfo.ipi_zone, inp);
+	}
+
+	ofp_in_pcbinfo_destroy(&V_icmbinfo);
+	uma_zdestroy(V_icmbinfo.ipi_zone);
+}
+
+static int
+icmp_attach(struct socket *so, int proto, struct thread *td)
+{
+	struct inpcb *inp;
+	int error;
+
+	(void)proto;
+	(void)td;
+
+	inp = sotoinpcb(so);
+	KASSERT(inp == NULL, ("%s: inp != NULL", __func__));
+
+	/* HJo: Constant space reserved.
+	error = ofp_soreserve(so, V_udp_sendspace, V_udp_recvspace);
+	if (error)
+		return (error);
+	*/
+
+	INP_INFO_WLOCK(&V_icmbinfo);
+
+	error = ofp_in_pcballoc(so, &V_icmbinfo);
+	if (error) {
+		INP_INFO_WUNLOCK(&V_icmbinfo);
+		return error;
+	}
+
+	inp = sotoinpcb(so);
+	inp->inp_vflag |= INP_IPV4;
+	inp->inp_ip_ttl = V_ip_defttl;
+
+	/* HJo: Replaced by static allocation.
+	error = udp_newudpcb(inp);
+	if (error) {
+		ofp_in_pcbdetach(inp);
+		ofp_in_pcbfree(inp);
+		INP_INFO_WUNLOCK(&V_udbinfo);
+		return (error);
+	}
+	*/
+
+	inp->ppcb_space.icmp_ppcb.u_seq = 0;
+	inp->ppcb_space.icmp_ppcb.send_timestamp = 0;
+	inp->inp_ppcb = &inp->ppcb_space.icmp_ppcb;
+
+	INP_WUNLOCK(inp);
+	INP_INFO_WUNLOCK(&V_icmbinfo);
+	return 0;
+}
+
+static void
+icmp_detach(struct socket *so)
+{
+	struct inpcb *inp;
+	struct icmpcb *icmpp;
+
+	inp = sotoinpcb(so);
+	KASSERT(inp != NULL, ("%s: inp == NULL", __func__));
+	KASSERT(inp->inp_faddr.s_addr == OFP_INADDR_ANY,
+		("%s: not disconnected", __func__));
+
+	INP_INFO_WLOCK(&V_icmbinfo);
+	INP_WLOCK(inp);
+	icmpp = intoicmpcb(inp);
+	KASSERT(icmpp != NULL, ("%s: icmpp == NULL", __func__));
+	inp->inp_ppcb = NULL;
+	ofp_in_pcbdetach(inp);
+	ofp_in_pcbfree(inp);
+	INP_INFO_WUNLOCK(&V_icmbinfo);
+}
+
+static void
+icmp_close(struct socket *so)
+{
+	struct inpcb *inp;
+
+	inp = sotoinpcb(so);
+	KASSERT(inp != NULL, ("%s: inp == NULL", __func__));
+	INP_WLOCK(inp);
+	if (inp->inp_faddr.s_addr != OFP_INADDR_ANY) {
+		INP_HASH_WLOCK(&V_icmbinfo);
+		ofp_in_pcbdisconnect(inp);
+		inp->inp_laddr.s_addr = OFP_INADDR_ANY;
+		INP_HASH_WUNLOCK(&V_icmbinfo);
+		ofp_soisdisconnected(so);
+	}
+	INP_WUNLOCK(inp);
+}
+
+static int
+icmp_connect(struct socket *so, struct ofp_sockaddr *nam, struct thread *td)
+{
+	struct inpcb *inp;
+	int error = 0;
+	struct ofp_sockaddr_in *sin = (struct ofp_sockaddr_in *)nam;
+
+	inp = sotoinpcb(so);
+	KASSERT(inp != NULL, ("%s: inp == NULL", __func__));
+	INP_WLOCK(inp);
+	if (inp->inp_faddr.s_addr != OFP_INADDR_ANY) {
+		INP_WUNLOCK(inp);
+		return OFP_EISCONN;
+	}
+
+	(void)td;
+
+	inp->inp_lport = 0;
+	inp->inp_laddr.s_addr = OFP_INADDR_ANY;
+	inp->inp_faddr.s_addr = sin->sin_addr.s_addr;
+	inp->inp_fport = sin->sin_port;
+
+	if (error == 0)
+		ofp_soisconnected(so);
+	INP_WUNLOCK(inp);
+	return error;
+}
+
+static int
+icmp_disconnect(struct socket *so)
+{
+	struct inpcb *inp;
+
+	inp = sotoinpcb(so);
+	KASSERT(inp != NULL, ("%s: inp == NULL", __func__));
+	INP_WLOCK(inp);
+	if (inp->inp_faddr.s_addr == OFP_INADDR_ANY) {
+		INP_WUNLOCK(inp);
+		return OFP_ENOTCONN;
+	}
+
+	inp->inp_laddr.s_addr = OFP_INADDR_ANY;
+	inp->inp_faddr.s_addr = OFP_INADDR_ANY;
+
+	OFP_SOCK_LOCK(so);
+#if 1 /* HJo: FIX */
+	so->so_state &= ~SS_ISCONNECTED;		/* XXX */
+#endif
+	OFP_SOCK_UNLOCK(so);
+	INP_WUNLOCK(inp);
+	return 0;
+}
+
+static int
+icmp_sosend(struct socket *so, struct ofp_sockaddr *addr, struct uio *uio,
+	    odp_packet_t top, odp_packet_t control, int flags,
+	    struct thread *td)
+{
+	int error = 0;
+	struct inpcb *inp = NULL;
+	struct icmpcb *icmpp = NULL;
+	const uint8_t *data;
+	ofp_ssize_t resid;
+	odp_packet_t pkt = ODP_PACKET_INVALID;
+	uint16_t pkt_len = 0;
+	struct ofp_ip *ip = NULL;
+	struct ofp_icmp *icp = NULL;
+	ofp_in_addr_t out_addr = 0;
+	uint16_t out_id = 0;
+
+	(void)top;
+	(void)control;
+	(void)flags;
+	(void)td;
+
+	KASSERT(so->so_type == OFP_SOCK_RAW, ("%s: !OFP_SOCK_RAW", __func__));
+	KASSERT(so->so_proto->pr_flags & PR_ATOMIC,
+		("%s: !PR_ATOMIC", __func__));
+
+	inp = sotoinpcb(so);
+	icmpp = intoicmpcb(inp);
+
+	if (uio != NULL) {
+		data = uio->uio_iov->iov_base;
+		resid = uio->uio_iov->iov_len;
+	} else {
+		data = odp_packet_data(top);
+		resid = odp_packet_len(top);
+	}
+
+	if (addr) {
+		out_addr = ((struct ofp_sockaddr_in *)addr)->sin_addr.s_addr;
+		out_id = ((struct ofp_sockaddr_in *)addr)->sin_port;
+	} else {
+		out_addr = inp->inp_faddr.s_addr;
+		out_id = inp->inp_fport;
+	}
+
+	if (resid < (ofp_ssize_t)(sizeof(struct ofp_icmpdata))) {
+		OFP_ERR("ICMP data should be at least %ld bytes in length",
+			sizeof(struct ofp_icmpdata));
+		error = OFP_EINVAL;
+		goto out;
+	}
+
+/*
+	0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |     Type      |     Code      |          Checksum             |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |           Identifier          |        Sequence Number        |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |     Data ...
+   +-+-+-+-+-
+*/
+	pkt_len = sizeof(struct ofp_ether_vlan_header) + sizeof(struct ofp_ip) +
+		OFP_ICMP_ECHO_HEADER_LEN + resid;
+
+	pkt = ofp_socket_packet_alloc(pkt_len);
+
+	if (pkt == ODP_PACKET_INVALID) {
+		error = OFP_ENOMEM;
+		goto out;
+	}
+
+	odp_memset(odp_packet_data(pkt), 0, pkt_len);
+
+	odp_packet_l2_offset_set(pkt, 0);
+	odp_packet_l3_offset_set(pkt, sizeof(struct ofp_ether_vlan_header));
+
+	/* Set IP */
+	ip = (struct ofp_ip *)odp_packet_l3_ptr(pkt, NULL);
+
+	ip->ip_v = OFP_IPVERSION;
+	ip->ip_hl = sizeof(*ip) >> 2;
+	ip->ip_tos = inp->inp_ip_tos;
+	ip->ip_len = odp_cpu_to_be_16(pkt_len - odp_packet_l3_offset(pkt));
+	ip->ip_id = 0;
+	ip->ip_off = 0;
+	ip->ip_ttl = V_ip_defttl;
+	ip->ip_p = OFP_IPPROTO_ICMP;
+	ip->ip_dst.s_addr = out_addr;
+
+	/* Set ICMP */
+	icp = (struct ofp_icmp *)(ip + 1);
+	icp->icmp_type = OFP_ICMP_ECHO;
+	icp->icmp_code = 0;
+	icp->icmp_cksum = 0;
+	icp->ofp_icmp_id = out_id;
+	icp->ofp_icmp_seq = odp_cpu_to_be_16(++icmpp->u_seq);
+	icmpp->send_timestamp = odp_time_local_ns();
+
+	odp_memcpy((uint8_t *)icp + OFP_ICMP_ECHO_HEADER_LEN, data, resid);
+
+	icmp_send(pkt, NULL);
+
+	return 0;
+out:
+	if (pkt != ODP_PACKET_INVALID) {
+		odp_packet_free(pkt);
+		pkt = ODP_PACKET_INVALID;
+	}
+
+	return error;
+}
+
+static enum ofp_return_code
+icmp_socket_input(odp_packet_t pkt, struct ofp_ip *ip, struct ofp_icmp *icp)
+{
+	enum ofp_return_code ret = OFP_PKT_CONTINUE;
+	struct inpcb *inp = NULL;
+	struct icmpcb *icmpp = NULL;
+	struct inpcbhead *ipi_listhead = NULL;
+	struct socket *so = NULL;
+	odp_bool_t found = 0;
+	struct ofp_icmpdata *icp_data = NULL;
+
+	INP_INFO_RLOCK(&V_icmbinfo);
+
+	ipi_listhead = V_icmbinfo.ipi_listhead;
+
+	OFP_LIST_FOREACH(inp, ipi_listhead, inp_list) {
+		INP_RLOCK(inp);
+
+		if ((inp->inp_vflag & INP_IPV4) != 0  &&
+		    inp->inp_faddr.s_addr == ip->ip_src.s_addr &&
+		    inp->inp_fport == icp->ofp_icmp_id) {
+			icmpp = intoicmpcb(inp);
+
+			if (odp_be_to_cpu_16(icp->ofp_icmp_seq) != icmpp->u_seq) {
+				/* Drop late packets */
+				odp_packet_free(pkt);
+				pkt = ODP_PACKET_INVALID;
+			} else {
+				/* Save time diff. between send and receive time
+				in the first 8 bytes of the packet*/
+				icp_data = (struct ofp_icmpdata *)((uint8_t *)icp + OFP_ICMP_ECHO_HEADER_LEN);
+				icp_data->rtt = odp_time_local_ns() -
+					icmpp->send_timestamp;
+				icp_data->seq = icmpp->u_seq;
+				icp_data->ttl = ip->ip_ttl;
+
+				so = inp->inp_socket;
+
+				SOCKBUF_LOCK(&so->so_rcv);
+				if (ofp_sbappendaddr_locked(&so->so_rcv, pkt, ODP_PACKET_INVALID) == 0) {
+					SOCKBUF_UNLOCK(&so->so_rcv);
+					odp_packet_free(pkt);
+					pkt = ODP_PACKET_INVALID;
+				} else {
+					sorwakeup_locked(so);
+				}
+			}
+
+			found = 1;
+			ret = OFP_PKT_PROCESSED;
+		}
+
+		INP_RUNLOCK(inp);
+
+		if (found)
+			break;
+	}
+
+	INP_INFO_RUNLOCK(&V_icmbinfo);
+
+	return ret;
+}
+
+static int
+icmp_soreceive(struct socket *so, struct ofp_sockaddr **psa, struct uio *uio,
+	       odp_packet_t *mp0, odp_packet_t *controlp, int *flagsp)
+{
+	int error = 0;
+	odp_packet_t pkt;
+	struct ofp_ip *ip = NULL;
+	struct ofp_icmp *icp = NULL;
+	uint8_t *icp_data = NULL;
+	uint32_t icp_data_len = 0;
+
+	(void)mp0;
+	(void)controlp;
+	(void)flagsp;
+
+	if (uio->uio_iov->iov_len < sizeof(struct ofp_icmpdata)) {
+		OFP_ERR("ICMP receive data buffer should be at least %ld bytes "
+			"in length", sizeof(uint64_t));
+		return OFP_EINVAL;
+	}
+
+	SOCKBUF_LOCK(&so->so_rcv);
+	while (so->so_rcv.sb_put == so->so_rcv.sb_get) {
+		error = ofp_sbwait(&so->so_rcv);
+		if (error) {
+			SOCKBUF_UNLOCK(&so->so_rcv);
+			return error;
+		}
+	}
+
+	pkt = so->so_rcv.sb_mb[so->so_rcv.sb_get];
+	sbfree(&so->so_rcv, pkt);
+	if (++so->so_rcv.sb_get >= SOCKBUF_LEN)
+		so->so_rcv.sb_get = 0;
+
+	SOCKBUF_UNLOCK(&so->so_rcv);
+
+	ip = (struct ofp_ip *)odp_packet_l3_ptr(pkt, NULL);
+	icp = (struct ofp_icmp *)((uint8_t *)ip + (ip->ip_hl << 2));
+	icp_data = (uint8_t *)icp + OFP_ICMP_ECHO_HEADER_LEN;
+	icp_data_len = odp_be_to_cpu_16(ip->ip_len) - (ip->ip_hl << 2) -
+		OFP_ICMP_ECHO_HEADER_LEN;
+
+	if (icp_data_len > uio->uio_iov->iov_len)
+		icp_data_len = uio->uio_iov->iov_len;
+
+	odp_memcpy(uio->uio_iov->iov_base, icp_data, icp_data_len);
+
+	if (psa && *psa) {
+		struct ofp_sockaddr_in *addr = (struct ofp_sockaddr_in *)*psa;
+
+		odp_memset(addr, 0, sizeof(struct ofp_sockaddr_in));
+		addr->sin_addr.s_addr = ip->ip_src.s_addr;
+		addr->sin_port = icp->ofp_icmp_id;
+	}
+
+	odp_packet_free(pkt);
+	uio->uio_resid -= icp_data_len;
+	return 0;
+}
+
+struct pr_usrreqs ofp_icmp_usrreqs = {
+	.pru_attach =		icmp_attach,
+	.pru_close =		icmp_close,
+	.pru_detach =		icmp_detach,
+	.pru_connect =		icmp_connect,
+	.pru_disconnect =	icmp_disconnect,
+	.pru_sosend =		icmp_sosend,
+	.pru_soreceive =	icmp_soreceive,
+
+	.pru_accept =		ofp_pru_accept_notsupp,
+	.pru_bind =		ofp_pru_bind_notsupp,
+	.pru_connect2 =		ofp_pru_connect2_notsupp,
+	.pru_control =		ofp_pru_control_notsupp,
+	.pru_listen =		ofp_pru_listen_notsupp,
+	.pru_peeraddr =		ofp_pru_peeraddr_notsupp,
+	.pru_rcvd =		ofp_pru_rcvd_notsupp,
+	.pru_rcvoob =		ofp_pru_rcvoob_notsupp,
+	.pru_send =		ofp_pru_send_notsupp,
+	.pru_sense =		ofp_pru_sense_null,
+	.pru_shutdown =		ofp_pru_shutdown_notsupp,
+	.pru_sockaddr =		ofp_pru_sockaddr_notsupp,
+	.pru_sopoll =		ofp_pru_sopoll_notsupp,
+};

@@ -364,6 +364,12 @@ struct ofp_omsghdr {
 	int	msg_accrightslen;
 };
 
+struct ofp_icmpdata {
+	uint64_t rtt;
+	uint16_t seq;
+	uint8_t ttl;
+};
+
 /*
  * howto arguments for shutdown(2), specified by Posix.1g.
  */

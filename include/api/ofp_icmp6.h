@@ -93,8 +93,8 @@ struct ofp_icmp6_hdr {
 #define ofp_icmp6_data8	icmp6_dataun.icmp6_un_data8
 #define ofp_icmp6_pptr		ofp_icmp6_data32[0]	/* parameter prob */
 #define ofp_icmp6_mtu		icmp6_data32[0]		/* packet too big */
-#define ofp_icmp6_id		icmp6_data16[0]		/* echo request/reply */
-#define ofp_icmp6_seq		icmp6_data16[1]		/* echo request/reply */
+#define ofp_icmp6_id		ofp_icmp6_data16[0]	/* echo request/reply */
+#define ofp_icmp6_seq		ofp_icmp6_data16[1]	/* echo request/reply */
 #define ofp_icmp6_maxdelay	icmp6_data16[0]		/* mcast group membership */
 
 #define OFP_ICMP6_DST_UNREACH			1	/* dest unreachable, codes: */

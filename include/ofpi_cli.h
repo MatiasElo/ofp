@@ -149,4 +149,8 @@ void f_netstat_udp(ofp_print_t *pr, const char *s);
 void f_shutdown(ofp_print_t *pr, const char *s);
 void f_help_shutdown(ofp_print_t *pr, const char *s);
 
+void f_ping(ofp_print_t *pr, const char *s);
+void f_ping_v6(ofp_print_t *pr, const char *s);
+void f_help_ping(ofp_print_t *pr, const char *s);
+
 #endif

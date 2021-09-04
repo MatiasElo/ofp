@@ -11,6 +11,9 @@
 #include "api/ofp_icmp6.h"
 #include "ofpi_vnet.h"
 #include "ofpi_ip6_shm.h"
+
+extern struct pr_usrreqs	ofp_icmp6_usrreqs;
+
 /*
 void	icmp6_paramerror(struct mbuf *, int);
 */

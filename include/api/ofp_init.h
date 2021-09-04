@@ -362,6 +362,17 @@ typedef struct ofp_initialize_param_t {
 		int pcbport_hashtbl_size;
 	} udp;
 
+	/*
+	 * ICMP parameters
+	 */
+	struct icmp_s {
+		/**
+		 * Maximum number of ICMP PCBs.
+		 * Default value is OFP_NUM_PCB_ICMP_MAX
+		 */
+		int pcb_icmp_max;
+	} icmp;
+
 	/**
 	 * Create default loopback interface lo0, 127.0.0.1/8.
 	 * Interface can also be created with CLI or

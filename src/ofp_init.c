@@ -32,6 +32,7 @@
 #include "ofpi_tcp_shm.h"
 #include "ofpi_udp_shm.h"
 #include "ofpi_igmp_shm.h"
+#include "ofpi_icmp_shm.h"
 #include "ofpi_socketvar.h"
 #include "ofpi_socket.h"
 #include "ofpi_reass.h"
@@ -243,6 +244,8 @@ static void read_conf_file(ofp_initialize_param_t *params, const char *filename)
 	GET_CONF_INT(int, udp.pcb_hashtbl_size);
 	GET_CONF_INT(int, udp.pcbport_hashtbl_size);
 
+	GET_CONF_INT(int, icmp.pcb_icmp_max);
+
 	GET_CONF_INT(bool, if_loopback);
 
 	GET_CONF_STR(loglevel, loglevel);
@@ -320,6 +323,8 @@ void ofp_initialize_param_from_file(ofp_initialize_param_t *params,
 	params->udp.pcb_udp_max = OFP_NUM_PCB_UDP_MAX;
 	params->udp.pcb_hashtbl_size = 0; /* to be computed */
 	params->udp.pcbport_hashtbl_size = 0; /* to be computed */
+
+	params->icmp.pcb_icmp_max = OFP_NUM_PCB_ICMP_MAX;
 
 	params->if_loopback = 0;
 
@@ -424,6 +429,7 @@ static void ofp_init_prepare(void)
 	ofp_tcp_var_init_prepare();
 	ofp_udp_var_init_prepare();
 	ofp_igmp_var_init_prepare();
+	ofp_icmp_var_init_prepare();
 	ofp_ip_init_prepare();
 #ifdef INET6
 	ofp_ip6_init_prepare();
@@ -510,6 +516,7 @@ static int ofp_initialize_stack_global(ofp_initialize_param_t *params,
 	HANDLE_ERROR(ofp_tcp_var_init_global());
 	HANDLE_ERROR(ofp_udp_var_init_global());
 	HANDLE_ERROR(ofp_igmp_var_init_global());
+	HANDLE_ERROR(ofp_icmp_var_init_global());
 	HANDLE_ERROR(ofp_inet_init());
 	HANDLE_ERROR(ofp_ipsec_init_global(&params->ipsec));
 
@@ -759,6 +766,7 @@ int ofp_init_local_resources(const char *description)
 	HANDLE_ERROR(ofp_tcp_var_init_local());
 	HANDLE_ERROR(ofp_udp_var_init_local());
 	HANDLE_ERROR(ofp_igmp_var_init_local());
+	HANDLE_ERROR(ofp_icmp_var_init_local());
 	HANDLE_ERROR(ofp_send_pkt_out_init_local());
 	HANDLE_ERROR(ofp_ipsec_init_local());
 
@@ -845,6 +853,9 @@ int ofp_terminate_stack_global(const char *pool_name)
 
 	/* Cleanup sockets */
 	CHECK_ERROR(ofp_socket_term_global(), rc);
+
+	/* Cleanup of ICMP content */
+	CHECK_ERROR(ofp_icmp_var_term_global(), rc);
 
 	/* Cleanup of IGMP content */
 	CHECK_ERROR(ofp_igmp_var_term_global(), rc);

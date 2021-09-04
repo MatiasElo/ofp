@@ -104,8 +104,8 @@ static void f_help(ofp_print_t *pr, const char *s)
 	ofp_print(pr, "Display help information for CLI commands:\r\n"
 		"  help <command>\r\n"
 		"    command: alias, address, arp, debug, exit, ifconfig, ");
-	ofp_print(pr, "ipsec, loglevel, netstat, route, show, shutdown,");
-	ofp_print(pr, " stat, sysctl\r\n\r\n");
+	ofp_print(pr, "ipsec, loglevel, netstat, ping, route, show,");
+	ofp_print(pr, " shutdown, stat, sysctl\r\n\r\n");
 }
 
 static void f_help_exit(ofp_print_t *pr, const char *s)
@@ -345,6 +345,11 @@ struct cli_command commands[] = {
 		"help shutdown",
 		NULL,
 		f_help_shutdown
+	},
+	{
+		"help ping",
+		NULL,
+		f_help_ping
 	},
 	{
 		"arp",
@@ -632,6 +637,38 @@ struct cli_command commands[] = {
 		NULL,
 		f_help_shutdown
 	},
+	{
+		"ping IP4ADDR",
+		"ping IPv4 address",
+		f_ping
+	},
+	{
+		"ping IP4ADDR -C NUMBER",
+		"ping IPv4 address",
+		f_ping
+	},
+	{
+		"ping -A inet4 IP4ADDR",
+		"ping IPv4 address",
+		f_ping
+	},
+	{
+		"ping -A inet4 IP4ADDR -C NUMBER",
+		"ping IPv4 address",
+		f_ping
+	},
+#ifdef INET6
+	{
+		"ping -A inet6 IP6ADDR",
+		"ping IPv6 address",
+		f_ping_v6
+	},
+	{
+		"ping -A inet6 IP6ADDR -C NUMBER",
+		"ping IPv6 address",
+		f_ping_v6
+	},
+#endif /* INET6 */
 	{ NULL, NULL, NULL }
 };
 

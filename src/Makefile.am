@@ -62,6 +62,7 @@ net/ip4net/ofp_ip_init.c \
 net/ip4net/ofp_ip.c \
 net/ip4net/ofp_ip_reass.c \
 net/icmp/ofp_icmp.c \
+net/icmp/ofp_icmp_shm.c \
 net/udp/ofp_udp_shm.c \
 net/udp/ofp_udp_usrreq.c \
 net/tcp/ofp_tcp_shm.c \
@@ -142,5 +143,6 @@ cli/ofp_cli_address.c \
 cli/ofp_cli_sysctl.c \
 cli/ofp_cli_ipsec.c \
 cli/ofp_cli_netstat.c \
-cli/ofp_cli_shutdown.c
+cli/ofp_cli_shutdown.c \
+cli/ofp_cli_ping.c
 endif

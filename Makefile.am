@@ -64,6 +64,7 @@ noinst_HEADERS = \
 		  $(top_srcdir)/include/ofpi_vnet.h \
 		  $(top_srcdir)/include/ofpi_icmp6.h \
 		  $(top_srcdir)/include/ofpi_icmp.h \
+		  $(top_srcdir)/include/ofpi_icmp_shm.h \
 		  $(top_srcdir)/include/ofpi_igmp.h \
 		  $(top_srcdir)/include/ofpi_igmp_var.h \
 		  $(top_srcdir)/include/ofpi_if_arp.h \

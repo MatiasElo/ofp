@@ -48,6 +48,7 @@
 #include "ofpi_socket.h"
 #include "ofpi_ifnet_shm.h"
 #include "ofpi_udp_var.h"
+#include "ofpi_icmp.h"
 #include "ofpi_systm.h"
 #include "ofpi_uma.h"
 
@@ -295,6 +296,7 @@ struct inpcb {
 	void	*inp_ppcb;		/* (i) pointer to per-protocol pcb */
 	union {				/* HJo: static space allocation for inp_ppcp */
 		struct udpcb udp_ppcb;
+		struct icmpcb icmp_ppcb;
 	} ppcb_space;
 	struct	inpcbinfo *inp_pcbinfo;	/* (c) PCB list info */
 	struct	inpcbinfo  static_pcbinfo;

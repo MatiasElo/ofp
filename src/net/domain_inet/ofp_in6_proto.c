@@ -71,6 +71,7 @@
 #include "ofpi_ip6.h"
 #include "ofpi_ip6_var.h"
 #include "ofpi_socket.h"
+#include "ofpi_icmp.h"
 #include "ofpi_icmp6.h"
 
 /*
@@ -195,8 +196,13 @@ struct ip6protosw ofp_inet6sw[] = {
 	.pr_type =		OFP_SOCK_RAW,
 	.pr_domain =		&ofp_inet6domain,
 	.pr_protocol =		OFP_IPPROTO_ICMPV6,
+#ifndef INET	/* Do not call initialization twice. */
+	.pr_init =		ofp_icmp_init,
+	.pr_destroy =		ofp_icmp_destroy,
+#else
 	.pr_init =		NULL,
 	.pr_destroy =		NULL,
+#endif	/* INET */
 	.pr_flags =		PR_ATOMIC|PR_ADDR|PR_LASTHDR,
 	.pr_input =		ofp_icmp6_input,
 	.pr_output =		NULL/*rip6_output*/,
@@ -204,7 +210,7 @@ struct ip6protosw ofp_inet6sw[] = {
 	.pr_ctloutput =		NULL/*rip6_ctloutput*/,
 	.pr_fasttimo =		NULL/*icmp6_fasttimo*/,
 	.pr_slowtimo =		NULL/*icmp6_slowtimo*/,
-	.pr_usrreqs =		&nousrreqs
+	.pr_usrreqs =		&ofp_icmp6_usrreqs
 },
 {
 	.pr_type =		OFP_SOCK_RAW,

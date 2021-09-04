@@ -1366,6 +1366,13 @@ enum ofp_return_code ofp_ip6_output(odp_packet_t pkt,
 	if (!dev_out)
 		return OFP_PKT_DROP;
 
+	if (!ofp_ip6_is_set(ip6->ip6_src.ofp_s6_addr)) {
+		if (ofp_ip6_is_set(dev_out->ip6_addr))
+			memcpy(ip6->ip6_src.ofp_s6_addr, dev_out->ip6_addr, 16);
+		else
+			return OFP_PKT_DROP;
+	}
+
 	/* GRE */
 	if (ofp_if_type(dev_out) == OFP_IFT_GRE)
 		return ofp_output_ipv6_to_gre(pkt, dev_out);
