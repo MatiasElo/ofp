@@ -153,4 +153,7 @@ void f_ping(ofp_print_t *pr, const char *s);
 void f_ping_v6(ofp_print_t *pr, const char *s);
 void f_help_ping(ofp_print_t *pr, const char *s);
 
+void f_ps(ofp_print_t *pr, const char *s);
+void f_help_ps(ofp_print_t *pr, const char *s);
+
 #endif

@@ -108,7 +108,7 @@ static void f_help(ofp_print_t *pr, const char *s)
 		"on CLI commands:\r\n"
 		"  help <command>\r\n"
 		"    command: alias, address, arp, debug, exit, ifconfig, ");
-	ofp_print(pr, "ipsec, loglevel, netstat, ping, route, show,");
+	ofp_print(pr, "ipsec, loglevel, netstat, ping, ps, route, show,");
 	ofp_print(pr, " shutdown, stat, sysctl\r\n\r\n");
 
 	ofp_print(pr, "Commands summary:\r\n"
@@ -123,11 +123,12 @@ static void f_help(ofp_print_t *pr, const char *s)
 			  "loglevel : configures log level\r\n"
 			  "netstat  : prints network connections\r\n"
 			  "ping     : pings IPv4/IPv6 addresses\r\n"
+			  "ps       : prints information on running threads/processes\r\n"
 			  "route    : configures routes\r\n"
 			  "show     : displays status of OFP components "
 			  "(e.g arp, root) \r\n"
 			  "shutdown : shutdown OFP\r\n"
-			  "stat     : shows statistics \r\n"
+			  "stat     : prints statistics \r\n"
 			  "sysctl   : configures system parameters\r\n\r\n"
 			  );
 }
@@ -146,7 +147,7 @@ static void f_help_show(ofp_print_t *pr, const char *s)
 	ofp_print(pr, "Display current status:\r\n"
 		"  show <command>\r\n"
 		"    command: alias, address, arp, debug, ifconfig, ipsec, ");
-	ofp_print(pr, "loglevel, netstat, route, stat, sysctl\r\n\r\n");
+	ofp_print(pr, "loglevel, netstat, ps, route, stat, sysctl\r\n\r\n");
 }
 
 static int authenticate(const char *user, const char *passwd)
@@ -244,6 +245,11 @@ struct cli_command commands[] = {
 		"show sysctl",
 		NULL,
 		f_sysctl_dump
+	},
+	{
+		"show ps",
+		NULL,
+		f_ps
 	},
 	{
 		"debug",
@@ -374,6 +380,11 @@ struct cli_command commands[] = {
 		"help ping",
 		NULL,
 		f_help_ping
+	},
+	{
+		"help ps",
+		NULL,
+		f_help_ps
 	},
 	{
 		"arp",
@@ -693,6 +704,21 @@ struct cli_command commands[] = {
 		f_ping_v6
 	},
 #endif /* INET6 */
+	{
+		"ps",
+		"Show threads/processes",
+		f_ps
+	},
+	{
+		"ps show",
+		NULL,
+		f_ps
+	},
+	{
+		"ps help",
+		NULL,
+		f_help_ps
+	},
 	{ NULL, NULL, NULL }
 };
 

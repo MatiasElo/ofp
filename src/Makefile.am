@@ -144,5 +144,6 @@ cli/ofp_cli_sysctl.c \
 cli/ofp_cli_ipsec.c \
 cli/ofp_cli_netstat.c \
 cli/ofp_cli_shutdown.c \
-cli/ofp_cli_ping.c
+cli/ofp_cli_ping.c \
+cli/ofp_cli_ps.c
 endif
