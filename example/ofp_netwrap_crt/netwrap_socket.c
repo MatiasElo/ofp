@@ -544,7 +544,7 @@ ssize_t read(int sockfd, void *buf, size_t len)
 	ssize_t read_value;
 
 	if (IS_OFP_SOCKET(sockfd)) {
-		read_value = ofp_recv(sockfd, buf, len, 0);
+		read_value = ofp_recv(sockfd, buf, (ofp_size_t)len, 0);
 		errno = NETWRAP_ERRNO(ofp_errno);
 	} else if (libc_read)
 		read_value = (*libc_read)(sockfd, buf, len);
@@ -608,7 +608,7 @@ ssize_t recv(int sockfd, void *buf, size_t len, int flags)
 				ofp_flags |= OFP_MSG_WAITALL;
 		}
 
-		recv_value = ofp_recv(sockfd, buf, len, ofp_flags);
+		recv_value = ofp_recv(sockfd, buf, (ofp_size_t)len, ofp_flags);
 		errno = NETWRAP_ERRNO(ofp_errno);
 	} else if (libc_recv)
 		recv_value = (*libc_recv)(sockfd, buf, len, flags);

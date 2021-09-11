@@ -51,9 +51,9 @@ void f_sysctl_read(ofp_print_t *pr, const char *s)
 {
 	int ret = 0;
 	unsigned int var_type;
-	size_t var_type_len = sizeof(var_type);
+	ofp_size_t var_type_len = sizeof(var_type);
 	uint8_t old[SYSCTL_BUFF];
-	size_t old_len = SYSCTL_BUFF;
+	ofp_size_t old_len = SYSCTL_BUFF;
 
 	ret = ofp_sysctl("vartype", &var_type, &var_type_len,
 			 s, strlen(s), NULL);
@@ -140,10 +140,10 @@ void f_sysctl_write(ofp_print_t *pr, const char *s)
 	char var_name[SYSCTL_BUFF];
 	char val_str[SYSCTL_BUFF];
 	char val[SYSCTL_BUFF];
-	size_t val_len;
+	ofp_size_t val_len;
 	int ret = 0;
 	unsigned int var_type;
-	size_t var_type_len = sizeof(var_type);
+	ofp_size_t var_type_len = sizeof(var_type);
 
 	if (sscanf(s, "%s %s", var_name, val_str) != 2)
 		return;

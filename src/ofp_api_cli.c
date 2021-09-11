@@ -62,7 +62,7 @@ int ofp_cli_add_command(const char *cmd, const char *help,
 #endif /* CLI */
 }
 
-int ofp_cli_print(void *handle, char *buf, size_t buf_size)
+int ofp_cli_print(void *handle, char *buf, ofp_size_t buf_size)
 {
 	return ofp_print_buffer((ofp_print_t *)handle, buf, buf_size);
 }

@@ -8,7 +8,7 @@
 #define OFPI_IPSEC_SPD_H
 
 #include <odp_api.h>
-#include "api/ofp_types.h"
+#include "ofpi_types.h"
 #include "api/ofp_ipsec.h"
 #include "ofpi_ipsec_sad.h"
 

@@ -59,16 +59,16 @@ struct ofp_sysctl_req {
 	struct thread	*td;		/* used for access checking */
 	int		lock;		/* wiring state */
 	void		*oldptr;
-	size_t		oldlen;
-	size_t		oldidx;
+	ofp_size_t		oldlen;
+	ofp_size_t		oldidx;
 	int		(*oldfunc)(struct ofp_sysctl_req *_r, const void *_p,
-				   size_t _l);
+				   ofp_size_t _l);
 	const void	*newptr;
-	size_t		newlen;
-	size_t		newidx;
+	ofp_size_t		newlen;
+	ofp_size_t		newidx;
 	int		(*newfunc)(struct ofp_sysctl_req *_r, void *_p,
-				   size_t _l);
-	size_t		validlen;
+				   ofp_size_t _l);
+	ofp_size_t		validlen;
 	int		flags;
 };
 

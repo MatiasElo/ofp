@@ -163,9 +163,10 @@ int send_udp_loopback(int fd)
 int recv_udp(int fd)
 {
 	char buf[20];
-	int len = sizeof(buf);
+	ofp_size_t buf_len = sizeof(buf);
+	ofp_ssize_t len = 0;
 
-	len = ofp_recv(fd, buf, len, 0);
+	len = ofp_recv(fd, buf, buf_len, 0);
 	if (len == -1) {
 		OFP_ERR("Failed to rcv data(errno = %d)\n", ofp_errno);
 		return -1;
@@ -203,12 +204,13 @@ int send_udp_any(int fd)
 int recvfrom_udp(int fd)
 {
 	char buf[20];
-	int len = sizeof(buf);
+	ofp_size_t buf_len = sizeof(buf);
+	ofp_ssize_t len = 0;
 	struct ofp_sockaddr_in addr = {0};
 	ofp_socklen_t addr_len = 0;
 
-	len = ofp_recvfrom(fd, buf, len, 0,
-			(struct ofp_sockaddr *)&addr, &addr_len);
+	len = ofp_recvfrom(fd, buf, buf_len, 0,
+			   (struct ofp_sockaddr *)&addr, &addr_len);
 	if (len == -1) {
 		OFP_ERR("Failed to rcv data(errno = %d)\n", ofp_errno);
 		return -1;
@@ -233,9 +235,10 @@ int recvfrom_udp(int fd)
 int recvfrom_udp_null_addr(int fd)
 {
 	char buf[20];
-	int len = sizeof(buf);
+	ofp_size_t buf_len = sizeof(buf);
+	ofp_ssize_t len = 0;
 
-	len = ofp_recvfrom(fd, buf, len, 0, NULL, NULL);
+	len = ofp_recvfrom(fd, buf, buf_len, 0, NULL, NULL);
 	if (len == -1) {
 		OFP_ERR("Failed to rcv data(errno = %d)\n", ofp_errno);
 		return -1;
@@ -354,12 +357,13 @@ int send_udp6_loopback(int fd)
 int recvfrom_udp6(int fd)
 {
 	char buf[20];
-	int len = sizeof(buf);
+	ofp_size_t buf_len = sizeof(buf);
+	ofp_ssize_t len = 0;
 	struct ofp_sockaddr_in6 addr = {0};
 	ofp_socklen_t addr_len = 0;
 
-	len = ofp_recvfrom(fd, buf, len, 0,
-			(struct ofp_sockaddr *)&addr, &addr_len);
+	len = ofp_recvfrom(fd, buf, buf_len, 0,
+			   (struct ofp_sockaddr *)&addr, &addr_len);
 	if (len == -1) {
 		OFP_ERR("Failed to rcv data(errno = %d)\n", ofp_errno);
 		return -1;

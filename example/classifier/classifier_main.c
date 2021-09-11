@@ -510,7 +510,8 @@ static void app_processing(void)
 {
 	int fd_rcv = -1;
 	char buf[1500];
-	int len = sizeof(buf);
+	ofp_size_t buf_len = sizeof(buf);
+	ofp_ssize_t len = 0;
 	struct ofp_sockaddr_in addr = {0};
 	uint32_t ip_addr = 0;
 	odp_bool_t *is_running = NULL;
@@ -555,7 +556,7 @@ static void app_processing(void)
 	}
 
 	while (*is_running) {
-		len = ofp_recv(fd_rcv, buf, len, OFP_MSG_DONTWAIT);
+		len = ofp_recv(fd_rcv, buf, buf_len, OFP_MSG_DONTWAIT);
 		if (len == -1) {
 			if (ofp_errno == OFP_EWOULDBLOCK)
 				continue;

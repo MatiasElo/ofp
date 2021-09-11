@@ -10,6 +10,7 @@
 
 #include <odp_api.h>
 #include "ofp_init.h"
+#include "ofp_socket.h"
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
@@ -150,7 +151,7 @@ int ofp_cli_add_command(const char *cmd, const char *help,
  * @retval Number of characters printed.
  * @retval <0 Failure.
  */
-int ofp_cli_print(void *handle, char *buf, size_t buf_size);
+int ofp_cli_print(void *handle, char *buf, ofp_size_t buf_size);
 
 /**
  * Process the CLI commands from the file

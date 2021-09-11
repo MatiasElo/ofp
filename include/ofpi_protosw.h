@@ -133,7 +133,7 @@ extern struct domain ofp_inetdomain;
 struct ifnet;
 struct stat;
 struct ofp_ucred;
-struct uio;
+struct ofp_uio;
 
 /*
  * If the ordering here looks odd, that's because it's alphabetical.  These
@@ -172,13 +172,14 @@ struct pr_usrreqs {
 	int	(*pru_flush)(struct socket *so, int direction);
 	int	(*pru_sockaddr)(struct socket *so, struct ofp_sockaddr **nam);
 	int	(*pru_sosend)(struct socket *so, struct ofp_sockaddr *addr,
-			      struct uio *uio, odp_packet_t top, odp_packet_t control,
-		    int flags, struct thread *td);
+			      struct ofp_uio *uio, odp_packet_t top,
+			      odp_packet_t control, int flags,
+			      struct thread *td);
 	int	(*pru_soreceive)(struct socket *so, struct ofp_sockaddr **paddr,
-		    struct uio *uio, odp_packet_t *mp0, odp_packet_t *controlp,
-		    int *flagsp);
+				 struct ofp_uio *uio, odp_packet_t *mp0,
+				 odp_packet_t *controlp, int *flagsp);
 	int	(*pru_sopoll)(struct socket *so, int events,
-		    struct ofp_ucred *cred, struct thread *td);
+			      struct ofp_ucred *cred, struct thread *td);
 	void	(*pru_sosetlabel)(struct socket *so);
 	void	(*pru_close)(struct socket *so);
 };
@@ -207,11 +208,11 @@ int ofp_pru_sense_null(struct socket *so, struct stat *sb);
 int ofp_pru_shutdown_notsupp(struct socket *so);
 int ofp_pru_sockaddr_notsupp(struct socket *so, struct ofp_sockaddr **nam);
 int ofp_pru_sosend_notsupp(struct socket *so, struct ofp_sockaddr *addr,
-	struct uio *uio, odp_packet_t top, odp_packet_t control, int flags,
+	struct ofp_uio *uio, odp_packet_t top, odp_packet_t control, int flags,
 	struct thread *td);
 int ofp_pru_soreceive_notsupp(struct socket *so,
 	struct ofp_sockaddr **paddr,
-	struct uio *uio, odp_packet_t *mp0, odp_packet_t *controlp,
+	struct ofp_uio *uio, odp_packet_t *mp0, odp_packet_t *controlp,
 	int *flagsp);
 int ofp_pru_sopoll_notsupp(struct socket *so, int events, struct ofp_ucred *cred,
 	struct thread *td);

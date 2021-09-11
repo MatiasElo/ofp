@@ -48,7 +48,7 @@
  * Buffer with length to be used in SIOCGIFDESCR/SIOCSIFDESCR requests
  */
 struct ofp_ifreq_buffer {
-	size_t	length;
+	ofp_size_t	length;
 	void	*buffer;
 };
 

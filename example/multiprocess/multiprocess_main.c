@@ -506,7 +506,7 @@ int udp_test(appl_args_t *arg)
 				ofp_strerror(ofp_errno));
 			break;
 		}
-		OFP_INFO("%ld bytes received", dgram_size);
+		OFP_INFO("%d bytes received", dgram_size);
 	}
 
 	ofp_close(sd);
@@ -519,7 +519,8 @@ int tcp_test(appl_args_t *arg)
 	struct ofp_sockaddr_in laddr = {0};
 	uint32_t my_ip_addr = 0;
 	int ret, retry = 0;
-	ofp_ssize_t recv_size, total_recv_size = 0;
+	ofp_ssize_t recv_size;
+	uint64_t total_recv_size = 0;
 	char buff[BUFF_SIZE];
 
 	sd = ofp_socket(OFP_AF_INET, OFP_SOCK_STREAM, OFP_IPPROTO_TCP);
@@ -596,10 +597,10 @@ int tcp_test(appl_args_t *arg)
 			break;
 		}
 
-		total_recv_size += recv_size;
+		total_recv_size += (uint64_t)recv_size;
 		OFP_INFO("%ld/%ld bytes received",
 			 total_recv_size, arg->recv_count);
-	} while ((uint64_t)total_recv_size < arg->recv_count);
+	} while (total_recv_size < arg->recv_count);
 
 	ofp_close(cd);
 	ofp_close(sd);

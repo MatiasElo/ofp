@@ -8,7 +8,7 @@
 #define OFPI_IPSEC_SAD_H
 
 #include <odp_api.h>
-#include "api/ofp_types.h"
+#include "ofpi_types.h"
 #include "api/ofp_ipsec.h"
 
 struct ofp_ipsec_global_param;

@@ -87,11 +87,12 @@ static int mcasttest(void *arg)
 
 	while (*is_running) {
 		char buf[100];
-		int len = sizeof(buf);
+		ofp_size_t buf_len = sizeof(buf);
+		ofp_ssize_t len = 0;
 		struct ofp_sockaddr_in addr = {0};
 		ofp_socklen_t addr_len = 0;
 
-		len = ofp_recvfrom(fd, buf, len, 0,
+		len = ofp_recvfrom(fd, buf, buf_len, 0,
 				   (struct ofp_sockaddr *)&addr, &addr_len);
 		if (len == -1) {
 			OFP_ERR("Faild to rcv data(errno = %d)\n", ofp_errno);

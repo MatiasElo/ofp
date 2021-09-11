@@ -8,7 +8,7 @@
 #define _OFPI_ICMP_H_
 
 #include "api/ofp_icmp.h"
-#include "api/ofp_types.h"
+#include "ofpi_types.h"
 #include "ofpi_protosw.h"
 
 /*

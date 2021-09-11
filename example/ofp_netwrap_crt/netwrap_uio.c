@@ -28,8 +28,8 @@ ssize_t writev(int fd, const struct iovec *iov, int iovcnt)
 	if (IS_OFP_SOCKET(fd)) {
 		int i;
 		ssize_t writev_sum = 0;
-		ssize_t iov_len;
-		ssize_t iov_snt;
+		ofp_size_t iov_len;
+		ofp_size_t iov_snt;
 		char *iov_base;
 		ofp_ssize_t ofp_send_res;
 

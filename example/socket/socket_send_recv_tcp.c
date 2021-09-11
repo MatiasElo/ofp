@@ -152,8 +152,8 @@ int send_tcp6_any(int fd)
 static int _receive_tcp(int fd, uint32_t cycles)
 {
 	char buf[1024];
-	size_t recv_size;
-	int len;
+	ofp_size_t recv_size;
+	ofp_ssize_t len;
 	int fd_accepted = -1;
 	uint32_t cycle = 0;
 
@@ -178,7 +178,7 @@ static int _receive_tcp(int fd, uint32_t cycles)
 		}
 		buf[len] = 0;
 
-		if ((size_t)len != strlen(tcp_buf) + 1) {
+		if (len != (ofp_ssize_t)(strlen(tcp_buf) + 1)) {
 			OFP_ERR("FAILED : length received is wrong:[%d]\n",
 				len);
 			ofp_close(fd_accepted);
@@ -218,8 +218,8 @@ int receive_multi_tcp(int fd)
 int receive_tcp4_msg_waitall(int fd)
 {
 	char buf[1024];
-	size_t recv_size;
-	int len, len2;
+	ofp_size_t recv_size;
+	ofp_ssize_t len, len2;
 	int fd_accepted = -1;
 
 	recv_size = strlen(tcp_buf);
@@ -256,7 +256,7 @@ int receive_tcp4_msg_waitall(int fd)
 	}
 
 	/* Total length should be ok. */
-	if ((size_t)len + len2 != strlen(tcp_buf) * 2) {
+	if (len + len2 != (ofp_ssize_t)(strlen(tcp_buf) * 2)) {
 		OFP_ERR("FAILED : length received is wrong:[%d]\n", len + len2);
 		ofp_close(fd_accepted);
 		return -1;

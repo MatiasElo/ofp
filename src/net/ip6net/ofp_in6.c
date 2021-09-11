@@ -65,7 +65,7 @@
 #include "ofpi_ip6_var.h"
 #include "ofpi_socket.h"
 #include "ofpi_protosw.h"
-#include "api/ofp_types.h"
+#include "ofpi_types.h"
 #include "api/ofp_route_arp.h"
 #include "api/ofp_errno.h"
 #include "ofpi_vnet.h"

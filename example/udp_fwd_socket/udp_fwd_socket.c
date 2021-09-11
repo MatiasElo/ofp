@@ -114,8 +114,8 @@ static void notify(union ofp_sigval *sv)
 
 	ofp_udp_packet_parse(ss->pkt, NULL, NULL, NULL);
 
-	ofp_udp_pkt_sendto(s,
-			ss->pkt, (struct ofp_sockaddr *)raddr, sizeof(*raddr));
+	ofp_udp_packet_sendto(s, ss->pkt,
+			      (struct ofp_sockaddr *)raddr, sizeof(*raddr));
 
 	/* mark packet as consumed*/
 	ss->pkt = ODP_PACKET_INVALID;

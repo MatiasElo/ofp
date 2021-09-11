@@ -317,7 +317,7 @@ sysctl_handle_string(OFP_SYSCTL_HANDLER_ARGS)
 {
 	int error=0;
 	char *tmparg;
-	size_t outlen;
+	ofp_size_t outlen;
 	(void)oidp;
 
 	/*
@@ -407,7 +407,7 @@ sysctl_handle_vartype(OFP_SYSCTL_HANDLER_ARGS)
 }
 
 static int
-sysctl_old_data(struct ofp_sysctl_req *req, const void *p, size_t l)
+sysctl_old_data(struct ofp_sysctl_req *req, const void *p, ofp_size_t l)
 {
 	if (!req->oldptr)
 		return 0;
@@ -422,7 +422,7 @@ sysctl_old_data(struct ofp_sysctl_req *req, const void *p, size_t l)
 }
 
 static int
-sysctl_new_data(struct ofp_sysctl_req *req, void *p, size_t l)
+sysctl_new_data(struct ofp_sysctl_req *req, void *p, ofp_size_t l)
 {
 	if (!req->newptr)
 		return 0;
@@ -437,7 +437,7 @@ sysctl_new_data(struct ofp_sysctl_req *req, void *p, size_t l)
 }
 
 static struct ofp_sysctl_oid *
-ofp_sysctl_find_child(const char *child_name, size_t child_name_len,
+ofp_sysctl_find_child(const char *child_name, ofp_size_t child_name_len,
 		      struct ofp_sysctl_oid *parent)
 {
 	struct ofp_sysctl_oid *oidp;
@@ -544,8 +544,8 @@ sysctl_request(const char *name, struct ofp_sysctl_req *req)
 }
 
 int
-ofp_sysctl(const char *name, void *old, size_t *oldlenp,
-	   const void *new, size_t newlen, size_t *retval)
+ofp_sysctl(const char *name, void *old, ofp_size_t *oldlenp,
+	   const void *new, ofp_size_t newlen, ofp_size_t *retval)
 {
 	int error = 0;
 	struct ofp_sysctl_req req = {0};

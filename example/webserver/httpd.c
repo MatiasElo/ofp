@@ -34,7 +34,7 @@ static int mysend(int s, char *p, int len)
 	int n;
 
 	while (len > 0) {
-		n = ofp_send(s, p, len, 0);
+		n = ofp_send(s, p, (ofp_size_t)len, 0);
 		if (n < 0) {
 			OFP_ERR("ofp_send failed n=%d, err='%s'",
 				  n, ofp_strerror(ofp_errno));

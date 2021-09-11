@@ -110,7 +110,7 @@ receive_non_blocking(void)
 	struct ofp_sockaddr_in remote;
 	ofp_socklen_t remote_len;
 	char buf[64];
-	int len = sizeof(buf);
+	ofp_size_t len = sizeof(buf);
 
 	s = ofp_socket(OFP_AF_INET, OFP_SOCK_DGRAM, OFP_IPPROTO_UDP);
 

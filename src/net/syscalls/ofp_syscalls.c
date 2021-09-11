@@ -30,7 +30,7 @@
 #include "ofpi_protosw.h"
 #include "ofpi_ioctl.h"
 #include "ofpi_route.h"
-#include "api/ofp_types.h"
+#include "ofpi_types.h"
 #include "ofpi_syscalls.h"
 #include "ofpi_pkt_processing.h"
 
@@ -128,11 +128,11 @@ ofp_connect(int sockfd, const struct ofp_sockaddr *addr, ofp_socklen_t addrlen)
 }
 
 ofp_ssize_t
-ofp_sendto(int sockfd, const void *buf, size_t len, int flags,
-	     const struct ofp_sockaddr *dest_addr, ofp_socklen_t addrlen)
+ofp_sendto(int sockfd, const void *buf, ofp_size_t len, int flags,
+	   const struct ofp_sockaddr *dest_addr, ofp_socklen_t addrlen)
 {
 	struct ofp_iovec iovec;
-	struct uio uio;
+	struct ofp_uio uio;
 	struct thread   td;
 	union ofp_sockaddr_store nonconstaddr;
 	struct socket  *so = ofp_get_sock_by_fd(sockfd);
@@ -159,23 +159,24 @@ ofp_sendto(int sockfd, const void *buf, size_t len, int flags,
 	 (dest_addr && addrlen)? (struct ofp_sockaddr *)&nonconstaddr : NULL,
 	 &uio, ODP_PACKET_INVALID, ODP_PACKET_INVALID, flags, &td);
 
-	if ((ssize_t)len != uio.uio_resid) ofp_errno = 0;
+	if ((ofp_ssize_t)len != uio.uio_resid)
+		ofp_errno = 0;
 
-	return ofp_errno ? -1 : ((ssize_t)len - uio.uio_resid);
+	return ofp_errno ? -1 : ((ofp_ssize_t)len - uio.uio_resid);
 }
 
 ofp_ssize_t
-ofp_send(int sockfd, const void *buf, size_t len, int flags)
+ofp_send(int sockfd, const void *buf, ofp_size_t len, int flags)
 {
 	return ofp_sendto(sockfd, buf, len, flags, NULL, 0);
 }
 
 ofp_ssize_t
-ofp_recvfrom(int sockfd, void *buf, size_t len, int flags,
-	       struct ofp_sockaddr *src_addr, ofp_socklen_t *addrlen)
+ofp_recvfrom(int sockfd, void *buf, ofp_size_t len, int flags,
+	     struct ofp_sockaddr *src_addr, ofp_socklen_t *addrlen)
 {
 	struct ofp_iovec iovec;
-	struct uio uio;
+	struct ofp_uio uio;
 	struct socket  *so = ofp_get_sock_by_fd(sockfd);
 	if (!so) {
 		ofp_errno = OFP_EBADF;
@@ -197,7 +198,7 @@ ofp_recvfrom(int sockfd, void *buf, size_t len, int flags,
 }
 
 ofp_ssize_t
-ofp_recv(int sockfd, void *buf, size_t len, int flags)
+ofp_recv(int sockfd, void *buf, ofp_size_t len, int flags)
 {
 	return ofp_recvfrom(sockfd, buf, len, flags, NULL, 0);
 }
@@ -484,8 +485,9 @@ void *ofp_udp_packet_parse(odp_packet_t pkt, int *length,
 }
 
 ofp_ssize_t
-ofp_udp_pkt_sendto(int sockfd, odp_packet_t pkt,
-		     const struct ofp_sockaddr *dest_addr, ofp_socklen_t addrlen)
+ofp_udp_packet_sendto(int sockfd, odp_packet_t pkt,
+		      const struct ofp_sockaddr *dest_addr,
+		      ofp_socklen_t addrlen)
 {
 	struct ofp_sockaddr *addr =
 		(struct ofp_sockaddr *)(uintptr_t)dest_addr;

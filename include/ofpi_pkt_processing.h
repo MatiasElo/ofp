@@ -10,7 +10,7 @@
 
 #include <odp_api.h>
 #include <string.h>
-#include "api/ofp_types.h"
+#include "ofpi_types.h"
 #include "api/ofp_pkt_processing.h"
 #include "ofpi_in.h"
 #include "ofpi_init.h"

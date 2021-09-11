@@ -89,7 +89,7 @@ __FBSDID("$FreeBSD: release/9.1.0/sys/netinet6/udp6_usrreq.c 238247 2012-07-08 1
 
 
 #include <odp_api.h>
-#include "api/ofp_types.h"
+#include "ofpi_types.h"
 #include "api/ofp_errno.h"
 #include "ofpi_ifnet_shm.h"
 #include "ofpi_socket.h"

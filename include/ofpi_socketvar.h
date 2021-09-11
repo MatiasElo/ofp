@@ -327,7 +327,7 @@ extern so_gen_t so_gencnt;
 struct mbuf;
 struct ofp_sockaddr;
 struct ofp_ucred;
-struct uio;
+struct ofp_uio;
 
 /* 'which' values for socket upcalls. */
 #define	OFP_SO_RCV		1
@@ -351,7 +351,7 @@ int	ofp_sobind(struct socket *so, struct ofp_sockaddr *nam, struct thread *td);
 int	ofp_soclose(struct socket *so);
 int	ofp_soconnect(struct socket *so, struct ofp_sockaddr *nam, struct thread *td);
 int	soconnect2(struct socket *so1, struct socket *so2);
-int	socow_setup(odp_packet_t m0, struct uio *uio);
+int	socow_setup(odp_packet_t m0, struct ofp_uio *uio);
 int	ofp_socreate(int dom, struct socket **aso, int type, int proto, struct thread *td);
 int	ofp_sodisconnect(struct socket *so);
 struct ofp_sockaddr *sodupsockaddr(const struct ofp_sockaddr *sa, int mflags);
@@ -369,34 +369,36 @@ int	sopoll(struct socket *so, int events, struct ofp_ucred *active_cred,
 	    struct thread *td);
 int	sopoll_generic(struct socket *so, int events,
 	    struct ofp_ucred *active_cred, struct thread *td);
-int	ofp_soreceive(struct socket *so, struct ofp_sockaddr **paddr, struct uio *uio,
-	    odp_packet_t *mp0, odp_packet_t *controlp, int *flagsp);
+int	ofp_soreceive(struct socket *so, struct ofp_sockaddr **paddr,
+		      struct ofp_uio *uio, odp_packet_t *mp0,
+		      odp_packet_t *controlp, int *flagsp);
 int	soreceive_stream(struct socket *so, struct ofp_sockaddr **paddr,
-	    struct uio *uio, odp_packet_t *mp0, odp_packet_t *controlp,
-	    int *flagsp);
+			 struct ofp_uio *uio, odp_packet_t *mp0,
+			 odp_packet_t *controlp, int *flagsp);
 int	ofp_soreceive_dgram(struct socket *so, struct ofp_sockaddr **paddr,
-	    struct uio *uio, odp_packet_t *mp0, odp_packet_t *controlp,
-	    int *flagsp);
+			    struct ofp_uio *uio, odp_packet_t *mp0,
+			    odp_packet_t *controlp, int *flagsp);
 int	ofp_soreceive_generic(struct socket *so, struct ofp_sockaddr **paddr,
-	    struct uio *uio, odp_packet_t *mp0, odp_packet_t *controlp,
-	    int *flagsp);
+			      struct ofp_uio *uio, odp_packet_t *mp0,
+			      odp_packet_t *controlp, int *flagsp);
 int	ofp_soreserve(struct socket *so, uint64_t sndcc, uint64_t rcvcc);
 void	sorflush(struct socket *so);
 #if 0
-int	ofp_sosend(struct socket *so, struct ofp_sockaddr *addr, struct uio *uio,
-	       odp_packet_t top, odp_packet_t control, int flags,
-	       struct thread *td);
+int	ofp_sosend(struct socket *so, struct ofp_sockaddr *addr,
+		   struct ofp_uio *uio, odp_packet_t top,
+		   odp_packet_t control, int flags, struct thread *td);
 #endif
-int	ofp_sosend(struct socket *so, struct ofp_sockaddr *addr, struct uio *uio,
-	       odp_packet_t top, odp_packet_t control, int flags, struct thread *td);
+int	ofp_sosend(struct socket *so, struct ofp_sockaddr *addr,
+		   struct ofp_uio *uio, odp_packet_t top, odp_packet_t control,
+		   int flags, struct thread *td);
 
 int	ofp_sosend_dgram(struct socket *so, struct ofp_sockaddr *addr,
-		     struct uio *uio, odp_packet_t top, odp_packet_t control,
-		     int flags, struct thread *td);
+			 struct ofp_uio *uio, odp_packet_t top,
+			 odp_packet_t control, int flags, struct thread *td);
 
 int	ofp_sosend_generic(struct socket *so, struct ofp_sockaddr *addr,
-		       struct uio *uio, odp_packet_t top, odp_packet_t control,
-		       int flags, struct thread *td);
+			   struct ofp_uio *uio, odp_packet_t top,
+			   odp_packet_t control, int flags, struct thread *td);
 int	ofp_soshutdown(struct socket *so, int how);
 void	sotoxsocket(struct socket *so, struct xsocket *xso);
 void	ofp_soupcall_clear(struct socket *so, int which);

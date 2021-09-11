@@ -50,21 +50,6 @@
 /*
  * Data types.
  */
-#ifndef OFP__GID_T_DECLARED
-typedef	__ofp_gid_t		ofp_gid_t;
-#define	OFP__GID_T_DECLARED
-#endif /* OFP__GID_T_DECLARED */
-
-#ifndef OFP__OFF_T_DECLARED
-typedef	__ofp_off_t		ofp_off_t;
-#define	OFP__OFF_T_DECLARED
-#endif /* OFP__OFF_T_DECLARED */
-
-#ifndef OFP__PID_T_DECLARED
-typedef	__ofp_pid_t		ofp_pid_t;
-#define	OFP__PID_T_DECLARED
-#endif /* OFP__PID_T_DECLARED */
-
 #ifndef OFP__SA_FAMILY_T_DECLARED
 typedef	__ofp_sa_family_t	ofp_sa_family_t;
 #define	OFP__SA_FAMILY_T_DECLARED
@@ -75,15 +60,10 @@ typedef	__ofp_socklen_t	ofp_socklen_t;
 #define OFP__SOCKLEN_T_DECLARED
 #endif /* OFP__SOCKLEN_T_DECLARED */
 
-#ifndef OFP__SSIZE_T_DECLARED
-typedef	__ofp_ssize_t		ofp_ssize_t;
-#define	OFP__SSIZE_T_DECLARED
-#endif /* OFP__SSIZE_T_DECLARED */
-
-#ifndef OFP__UID_T_DECLARED
-typedef	__ofp_uid_t		ofp_uid_t;
-#define	OFP__UID_T_DECLARED
-#endif /*OFP__UID_T_DECLARED*/
+#ifndef OFP__OFF_T_DECLARED
+typedef	__ofp_off_t		ofp_off_t;
+#define	OFP__OFF_T_DECLARED
+#endif /* OFP__OFF_T_DECLARED */
 
 /*
  * Types
@@ -185,7 +165,7 @@ struct ofp_sockaddr {
  * Structure used by kernel to pass protocol
  * information in raw sockets.
  */
-struct sockproto {
+struct ofp_sockproto {
 	unsigned short	sp_family;		/* address family */
 	unsigned short	sp_protocol;		/* protocol */
 };
@@ -427,13 +407,14 @@ int	ofp_listen(int, int);
 int	ofp_shutdown(int, int);
 int	ofp_close(int);
 
-ofp_ssize_t	ofp_recv(int, void *, size_t, int);
-ofp_ssize_t	ofp_recvfrom(int, void *, size_t, int,
-		struct ofp_sockaddr * __restrict, ofp_socklen_t * __restrict);
+ofp_ssize_t	ofp_recv(int, void *, ofp_size_t, int);
+ofp_ssize_t	ofp_recvfrom(int, void *, ofp_size_t, int,
+			     struct ofp_sockaddr *__restrict,
+			     ofp_socklen_t *__restrict);
 
-ofp_ssize_t	ofp_send(int, const void *, size_t, int);
-ofp_ssize_t	ofp_sendto(int, const void *,
-		size_t, int, const struct ofp_sockaddr *, ofp_socklen_t);
+ofp_ssize_t	ofp_send(int, const void *, ofp_size_t, int);
+ofp_ssize_t	ofp_sendto(int, const void *, ofp_size_t, int,
+			   const struct ofp_sockaddr *, ofp_socklen_t);
 
 int	ofp_setsockopt(int, int, int, const void *, ofp_socklen_t);
 int	ofp_getsockopt(int, int, int, void *, ofp_socklen_t *);
@@ -443,8 +424,8 @@ int	ofp_ioctl(int, int, ...);
 void	*ofp_udp_packet_parse(odp_packet_t, int *,
 				struct ofp_sockaddr *,
 				ofp_socklen_t *);
-ofp_ssize_t ofp_udp_pkt_sendto(int, odp_packet_t,
-				   const struct ofp_sockaddr *, ofp_socklen_t);
+ofp_ssize_t ofp_udp_packet_sendto(int, odp_packet_t,
+				  const struct ofp_sockaddr *, ofp_socklen_t);
 
 #if 0 /* Not implemented */
 int	ofp_getpeername(int, struct ofp_sockaddr * __restrict, ofp_socklen_t * __restrict);
@@ -452,8 +433,8 @@ int	ofp_getsockname(int, struct ofp_sockaddr * __restrict, ofp_socklen_t * __res
 
 ofp_ssize_t	ofp_recvmsg(int, struct ofp_msghdr *, int);
 ofp_ssize_t	ofp_sendmsg(int, const struct ofp_msghdr *, int);
-int	ofp_sendfile(int, int, ofp_off_t, size_t, struct ofp_sf_hdtr *,
-		ofp_off_t *, int);
+int	ofp_sendfile(int, int, ofp_off_t, ofp_size_t, struct ofp_sf_hdtr *,
+		     ofp_off_t *, int);
 
 int	ofp_setfib(int);
 int	ofp_sockatmark(int);

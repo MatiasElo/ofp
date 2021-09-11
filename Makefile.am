@@ -133,6 +133,7 @@ noinst_HEADERS = \
 		  $(top_srcdir)/include/ofpi_ipsec.h \
 		  $(top_srcdir)/include/ofpi_ipsec_spd.h \
 		  $(top_srcdir)/include/ofpi_ipsec_sad.h \
-		  $(top_srcdir)/include/ofpi_print.h
+		  $(top_srcdir)/include/ofpi_print.h \
+		  $(top_srcdir)/include/ofpi_types.h
 
 EXTRA_DIST = bootstrap .scmversion

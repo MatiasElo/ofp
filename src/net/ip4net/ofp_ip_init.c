@@ -30,7 +30,7 @@
  */
 
 #include <odp_api.h>
-#include "api/ofp_types.h"
+#include "ofpi_types.h"
 #include "ofpi_in.h"
 #include "ofpi_ip_var.h"
 #include "ofpi_protosw.h"

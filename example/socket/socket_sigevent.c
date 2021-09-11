@@ -12,10 +12,11 @@
 int recv_send_udp_local_ip(int fd)
 {
 	char buf[20];
-	int len = sizeof(buf);
+	ofp_size_t buf_len = sizeof(buf);
+	ofp_ssize_t len = 0;
 	struct ofp_sockaddr_in dest_addr = {0};
 
-	len = ofp_recv(fd, buf, len, 0);
+	len = ofp_recv(fd, buf, buf_len, 0);
 	if (len == -1) {
 		OFP_ERR("Faild to rcv data(errno = %d)\n", ofp_errno);
 		return -1;
@@ -111,10 +112,11 @@ static void notify_udp_ipv4(union ofp_sigval *sv)
 int recv_send_udp6_local_ip(int fd)
 {
 	char buf[20];
-	int len = sizeof(buf);
+	ofp_size_t buf_len = sizeof(buf);
+	ofp_ssize_t len = 0;
 	struct ofp_sockaddr_in6 dest_addr = {0};
 
-	len = ofp_recv(fd, buf, len, 0);
+	len = ofp_recv(fd, buf, buf_len, 0);
 	if (len == -1) {
 		OFP_ERR("Faild to rcv data(errno = %d)\n", ofp_errno);
 		return -1;
@@ -214,7 +216,8 @@ int connect_recv_send_tcp_local_ip(int fd)
 {
 	struct ofp_sockaddr_in addr = {0};
 	char buf[20];
-	int len = sizeof(buf);
+	ofp_size_t buf_len = sizeof(buf);
+	ofp_ssize_t len = 0;
 
 	addr.sin_len = sizeof(struct ofp_sockaddr_in);
 	addr.sin_family = OFP_AF_INET;
@@ -228,13 +231,13 @@ int connect_recv_send_tcp_local_ip(int fd)
 		return -1;
 	}
 
-	len = ofp_recv(fd, buf, len, 0);
+	len = ofp_recv(fd, buf, buf_len, 0);
 	if (len == -1) {
 		OFP_ERR("Faild to rcv data(errno = %d)\n", ofp_errno);
 		return -1;
 	}
 
-	len = ofp_send(fd, buf, len, 0);
+	len = ofp_send(fd, buf, (ofp_size_t)len, 0);
 	if (len == -1) {
 		OFP_ERR("Faild to send data. (errno = %d)\n", ofp_errno);
 		return -1;
@@ -249,7 +252,8 @@ int connect_recv_send_tcp6_local_ip(int fd)
 {
 	struct ofp_sockaddr_in6 addr = {0};
 	char buf[20];
-	int len = sizeof(buf);
+	ofp_size_t buf_len = sizeof(buf);
+	ofp_ssize_t len = 0;
 
 	addr.sin6_len = sizeof(struct ofp_sockaddr_in6);
 	addr.sin6_family = OFP_AF_INET6;
@@ -263,13 +267,13 @@ int connect_recv_send_tcp6_local_ip(int fd)
 		return -1;
 	}
 
-	len = ofp_recv(fd, buf, len, 0);
+	len = ofp_recv(fd, buf, buf_len, 0);
 	if (len == -1) {
 		OFP_ERR("Faild to rcv data(errno = %d)\n", ofp_errno);
 		return -1;
 	}
 
-	len = ofp_send(fd, buf, len, 0);
+	len = ofp_send(fd, buf, (ofp_size_t)len, 0);
 	if (len == -1) {
 		OFP_ERR("Faild to send data. (errno = %d)\n", ofp_errno);
 		return -1;

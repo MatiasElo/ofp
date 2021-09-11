@@ -7,7 +7,7 @@
 
 #include <inttypes.h>
 #include <odp_api.h>
-#include "api/ofp_types.h"
+#include "ofpi_types.h"
 #include "api/ofp_ip6.h"
 #include "ofpi_log.h"
 #include "ofpi_shared_mem.h"

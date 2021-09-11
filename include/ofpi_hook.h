@@ -8,7 +8,7 @@
 #ifndef __OFPI_HOOK_H__
 #define __OFPI_HOOK_H__
 
-#include "api/ofp_types.h"
+#include "ofpi_types.h"
 #include "api/ofp_hook.h"
 
 #define OFP_HOOK(_hook_id_, _pkt_, _arg_, _pres_) do { \

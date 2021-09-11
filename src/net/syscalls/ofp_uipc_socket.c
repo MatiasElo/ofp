@@ -966,8 +966,9 @@ ofp_sodisconnect(struct socket *so)
 #define	SBLOCKWAIT(f)	(((f) & OFP_MSG_DONTWAIT) ? 0 : SBL_WAIT)
 
 int
-ofp_sosend_dgram(struct socket *so, struct ofp_sockaddr *addr, struct uio *uio,
-	     odp_packet_t top, odp_packet_t control, int flags, struct thread *td)
+ofp_sosend_dgram(struct socket *so, struct ofp_sockaddr *addr,
+		 struct ofp_uio *uio, odp_packet_t top, odp_packet_t control,
+		 int flags, struct thread *td)
 {
 	long space = 0;
 	ofp_ssize_t resid;
@@ -1117,8 +1118,9 @@ out:
  * on return.
  */
 int
-ofp_sosend_generic(struct socket *so, struct ofp_sockaddr *addr, struct uio *uio,
-	       odp_packet_t top, odp_packet_t control, int flags, struct thread *td)
+ofp_sosend_generic(struct socket *so, struct ofp_sockaddr *addr,
+		   struct ofp_uio *uio, odp_packet_t top, odp_packet_t control,
+		   int flags, struct thread *td)
 {
 	long space;
 	ofp_ssize_t resid;
@@ -1203,7 +1205,7 @@ restart:
 		space = sbspace(&so->so_snd);
 		if (flags & OFP_MSG_OOB)
 			space += 1024;
-		if ((atomic && resid > so->so_snd.sb_hiwat) ||
+		if ((atomic && resid > (ofp_ssize_t)so->so_snd.sb_hiwat) ||
 		    clen > (int)so->so_snd.sb_hiwat) {
 			SOCKBUF_UNLOCK(&so->so_snd);
 			error = OFP_EMSGSIZE;
@@ -1322,8 +1324,8 @@ out:
 }
 
 int
-ofp_sosend(struct socket *so, struct ofp_sockaddr *addr, struct uio *uio,
-    odp_packet_t top, odp_packet_t control, int flags, struct thread *td)
+ofp_sosend(struct socket *so, struct ofp_sockaddr *addr, struct ofp_uio *uio,
+	   odp_packet_t top, odp_packet_t control, int flags, struct thread *td)
 {
 	int error;
 
@@ -1357,8 +1359,9 @@ ofp_sosend(struct socket *so, struct ofp_sockaddr *addr, struct uio *uio,
  * the count in uio_resid.
  */
 int
-ofp_soreceive_generic(struct socket *so, struct ofp_sockaddr **psa, struct uio *uio,
-		  odp_packet_t *mp0, odp_packet_t *controlp, int *flagsp)
+ofp_soreceive_generic(struct socket *so, struct ofp_sockaddr **psa,
+		      struct ofp_uio *uio, odp_packet_t *mp0,
+		      odp_packet_t *controlp, int *flagsp)
 {
 	odp_packet_t m, *mp;
 	int flags, error, offset;
@@ -1410,9 +1413,10 @@ restart:
 	 */
 	if (m == ODP_PACKET_INVALID ||
 	    (((flags & OFP_MSG_DONTWAIT) == 0 &&
-	      so->so_rcv.sb_cc < uio->uio_resid) &&
+	      (ofp_ssize_t)so->so_rcv.sb_cc < uio->uio_resid) &&
 	     ((int)so->so_rcv.sb_cc < so->so_rcv.sb_lowat ||
-	    ((flags & OFP_MSG_WAITALL) && uio->uio_resid <= so->so_rcv.sb_hiwat)) &&
+	    ((flags & OFP_MSG_WAITALL) &&
+	     uio->uio_resid <= (ofp_ssize_t)so->so_rcv.sb_hiwat)) &&
 	    (pr->pr_flags & PR_ATOMIC) == 0)) {
 		KASSERT(m != ODP_PACKET_INVALID || !so->so_rcv.sb_cc,
 		    ("receive: so->so_rcv.sb_cc == %u",
@@ -1651,7 +1655,7 @@ dontblock:
 		len = uio->uio_resid;
 		if (so->so_oobmark && len > (int)(so->so_oobmark - offset))
 			len = so->so_oobmark - offset;
-		if (len > odp_packet_len(m) - moff)
+		if (len > (ofp_ssize_t)(odp_packet_len(m) - moff))
 			len = odp_packet_len(m) - moff;
 		/*
 		 * If mp is set, just pass back the mbufs.  Otherwise copy
@@ -1694,7 +1698,7 @@ dontblock:
 			uio->uio_resid -= len;
 
 		SOCKBUF_LOCK_ASSERT(&so->so_rcv);
-		if (len == odp_packet_len(m) - moff) {
+		if (len == (ofp_ssize_t)(odp_packet_len(m) - moff)) {
 			/* HJo
 			if (odp_packet_flags(m) & M_EOR)
 				flags |= OFP_MSG_EOR;
@@ -1877,8 +1881,9 @@ release:
  * sleep lock to prevent I/O interlacing.
  */
 int
-ofp_soreceive_dgram(struct socket *so, struct ofp_sockaddr **psa, struct uio *uio,
-		odp_packet_t *mp0, odp_packet_t *controlp, int *flagsp)
+ofp_soreceive_dgram(struct socket *so, struct ofp_sockaddr **psa,
+		    struct ofp_uio *uio, odp_packet_t *mp0,
+		    odp_packet_t *controlp, int *flagsp)
 {
 	int flags, error;
 	size_t len;
@@ -1993,8 +1998,8 @@ ofp_soreceive_dgram(struct socket *so, struct ofp_sockaddr **psa, struct uio *ui
 }
 
 int
-ofp_soreceive(struct socket *so, struct ofp_sockaddr **psa, struct uio *uio,
-	  odp_packet_t *mp0, odp_packet_t *controlp, int *flagsp)
+ofp_soreceive(struct socket *so, struct ofp_sockaddr **psa, struct ofp_uio *uio,
+	      odp_packet_t *mp0, odp_packet_t *controlp, int *flagsp)
 {
 	int error;
 
@@ -2833,8 +2838,8 @@ ofp_pru_sockaddr_notsupp(struct socket *so, struct ofp_sockaddr **nam)
 
 int
 ofp_pru_sosend_notsupp(struct socket *so, struct ofp_sockaddr *addr,
-	struct uio *uio, odp_packet_t top, odp_packet_t control, int flags,
-	struct thread *td)
+		       struct ofp_uio *uio, odp_packet_t top,
+		       odp_packet_t control, int flags,	struct thread *td)
 {
 	(void)so;
 	(void)addr;
@@ -2848,7 +2853,8 @@ ofp_pru_sosend_notsupp(struct socket *so, struct ofp_sockaddr *addr,
 
 int
 ofp_pru_soreceive_notsupp(struct socket *so, struct ofp_sockaddr **paddr,
-    struct uio *uio, odp_packet_t *mp0, odp_packet_t *controlp, int *flagsp)
+			  struct ofp_uio *uio, odp_packet_t *mp0,
+			  odp_packet_t *controlp, int *flagsp)
 {
 	(void)so;
 	(void)paddr;
@@ -2861,7 +2867,7 @@ ofp_pru_soreceive_notsupp(struct socket *so, struct ofp_sockaddr **paddr,
 
 int
 ofp_pru_sopoll_notsupp(struct socket *so, int events, struct ofp_ucred *cred,
-    struct thread *td)
+		       struct thread *td)
 {
 	(void)so;
 	(void)events;

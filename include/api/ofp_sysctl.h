@@ -38,6 +38,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "ofp_queue.h"
+#include "ofp_types.h"
 
 #if __GNUC__ >= 4
 #pragma GCC visibility push(default)
@@ -81,8 +82,8 @@
 #define OFP_CTLFLAG_CAPWR	0x00004000	/* Can be written in capability mode */
 #define OFP_CTLFLAG_CAPRW	(OFP_CTLFLAG_CAPRD|OFP_CTLFLAG_CAPWR)
 
-int	ofp_sysctl(const char *name, void *old, size_t *oldlenp,
-		     const void *newp, size_t newlen, size_t *retval);
+int	ofp_sysctl(const char *name, void *old, ofp_size_t *oldlenp,
+		   const void *newp, ofp_size_t newlen, ofp_size_t *retval);
 
 #if __GNUC__ >= 4
 #pragma GCC visibility pop

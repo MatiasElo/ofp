@@ -85,13 +85,13 @@ struct selinfo {
 
 struct ofp_iovec {
 	void   *iov_base;	/* Base address. */
-	size_t	iov_len;	/* Length. */
+	ofp_size_t	iov_len;	/* Length. */
 };
 
-struct uio {
+struct ofp_uio {
 	struct	ofp_iovec *uio_iov;		/* scatter/gather list */
 	int	uio_iovcnt;		/* length of scatter/gather list */
-	off_t	uio_offset;		/* offset in target object */
+	ofp_off_t	uio_offset;		/* offset in target object */
 	ofp_ssize_t	uio_resid;		/* remaining bytes to process */
 };
 

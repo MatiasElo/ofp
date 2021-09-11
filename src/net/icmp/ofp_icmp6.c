@@ -3006,7 +3006,7 @@ icmp6_disconnect(struct socket *so)
 }
 
 static int
-icmp6_sosend(struct socket *so, struct ofp_sockaddr *addr, struct uio *uio,
+icmp6_sosend(struct socket *so, struct ofp_sockaddr *addr, struct ofp_uio *uio,
 	     odp_packet_t top, odp_packet_t control, int flags,
 	     struct thread *td)
 {
@@ -3197,15 +3197,16 @@ icmp6_socket_input(odp_packet_t pkt, struct ofp_ip6_hdr *ip6,
 }
 
 static int
-icmp6_soreceive(struct socket *so, struct ofp_sockaddr **psa, struct uio *uio,
-		odp_packet_t *mp0, odp_packet_t *controlp, int *flagsp)
+icmp6_soreceive(struct socket *so, struct ofp_sockaddr **psa,
+		struct ofp_uio *uio, odp_packet_t *mp0,
+		odp_packet_t *controlp, int *flagsp)
 {
 	int error = 0;
 	odp_packet_t pkt;
 	struct ofp_ip6_hdr *ip6 = NULL;
 	struct ofp_icmp6_hdr *icmp6 = NULL;
 	uint8_t *icp_data = NULL;
-	uint32_t icp_data_len = 0;
+	ofp_size_t icp_data_len = 0;
 
 	(void)mp0;
 	(void)controlp;

@@ -338,7 +338,7 @@ static int run_server(void *arg ODP_UNUSED)
 
 	while (!exit_threads) {
 		uint8_t pkt_buf[SOCKET_RX_BUF_LEN];
-		int ret;
+		ofp_ssize_t ret;
 
 		ret = ofp_recv(gbl_args->client_fd, pkt_buf, SOCKET_RX_BUF_LEN,
 			       OFP_MSG_NBIO);
@@ -374,7 +374,7 @@ static int run_server_single(void *arg)
 
 	while (!exit_threads) {
 		uint8_t pkt_buf[SOCKET_RX_BUF_LEN];
-		int bytes;
+		ofp_ssize_t bytes;
 		int pkts;
 
 		timer_count++;

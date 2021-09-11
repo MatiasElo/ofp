@@ -13,7 +13,8 @@ int select_recv_udp(int fd)
 {
 
 	char buf[20];
-	int len = sizeof(buf);
+	ofp_size_t buff_len = sizeof(buf);
+	ofp_ssize_t len = 0;
 	struct ofp_timeval timeout;
 	int ret_select = 0;
 	ofp_fd_set read_fd;
@@ -43,7 +44,7 @@ int select_recv_udp(int fd)
 	OFP_INFO("ofp_select() returned %d; socket is selected.\n",
 		ret_select);
 
-	len = ofp_recv(fd, buf, len, 0);
+	len = ofp_recv(fd, buf, buff_len, 0);
 	if (len == -1) {
 		OFP_ERR("Faild to rcv data(errno = %d)\n", ofp_errno);
 		return -1;
@@ -59,7 +60,7 @@ int select_recv_udp(int fd)
 int select_recv_tcp(int fd)
 {
 	char buf[20];
-	int len = sizeof(buf);
+	ofp_ssize_t len = sizeof(buf);
 	int fd_accepted = -1;
 	struct ofp_timeval timeout;
 	int ret_select = 0;
@@ -120,7 +121,8 @@ int select_recv_tcp(int fd)
 int select_recv_udp_2(int fd)
 {
 	char buf[20];
-	int len = sizeof(buf);
+	ofp_size_t buf_len = sizeof(buf);
+	ofp_ssize_t len = 0;
 	struct ofp_timeval timeout;
 	int ret_select = 0;
 	ofp_fd_set read_fd;
@@ -180,7 +182,7 @@ int select_recv_udp_2(int fd)
 	OFP_INFO("ofp_select() returned %d; sockets are selected.\n",
 		ret_select);
 
-	len = ofp_recv(fd, buf, len, 0);
+	len = ofp_recv(fd, buf, buf_len, 0);
 	if (len == -1) {
 		OFP_ERR("Faild to rcv data(errno = %d)\n", ofp_errno);
 		ofp_close(fd2);
@@ -191,7 +193,7 @@ int select_recv_udp_2(int fd)
 	buf[len] = 0;
 	OFP_INFO("Data1 (%s, len = %d) was received.\n", buf, len);
 
-	len = ofp_recv(fd3, buf, sizeof(buf), 0);
+	len = ofp_recv(fd3, buf, buf_len, 0);
 	if (len == -1) {
 		OFP_ERR("Faild to rcv data(errno = %d)\n", ofp_errno);
 		ofp_close(fd2);

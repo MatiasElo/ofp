@@ -67,7 +67,8 @@ static void notify(union ofp_sigval *sv)
 	 */
 	odp_packet_push_head(pkt, 5);
 	memcpy(odp_packet_data(pkt), "ECHO:", 5);
-	ofp_udp_pkt_sendto(s, pkt, (struct ofp_sockaddr *)&addr, sizeof(addr));
+	ofp_udp_packet_sendto(s, pkt, (struct ofp_sockaddr *)&addr,
+			      sizeof(addr));
 #else
 	/*
 	 * Send using usual sendto(). Remember to free the packet.
