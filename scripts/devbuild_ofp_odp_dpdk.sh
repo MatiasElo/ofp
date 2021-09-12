@@ -15,7 +15,7 @@ echo '#include "pcap.h"' | cpp -H -o /dev/null 2>&1 || \
 echo '#include "numa.h"' | cpp -H -o /dev/null 2>&1 || \
     echo "Warning: NUMA library is not installed. You need to install libnuma-dev"
 
-git -c advice.detachedHead=false clone -q --depth=1 --branch=18.11 http://dpdk.org/git/dpdk-stable dpdk
+git -c advice.detachedHead=false clone -q --depth=1 --branch=19.11 http://dpdk.org/git/dpdk-stable dpdk
 pushd dpdk
 git log --oneline --decorate
 
@@ -46,13 +46,15 @@ git clone -q https://github.com/OpenDataPlane/odp-dpdk
 pushd odp-dpdk
 git checkout -b local_v1.25.2 v1.25.2.0_DPDK_19.11
 
+echo > $(pwd)/platform/linux-generic/Makefile.inc
+
 export CONFIGURE_FLAGS="--enable-shared=yes --enable-helper-linux"
 
 #Build ODP
 ./bootstrap
 ./configure  --enable-debug --enable-debug-print \
 	     --with-dpdk-path=`pwd`/../dpdk/install --prefix=$(pwd)/install \
-		 --with-platform=linux-generic
+	     --enable-dpdk-zero-copy --with-platform=linux-generic
 make -j${JOBS} install
 popd
 

@@ -123,7 +123,7 @@ OFPgen2 supports a wider variety of ODP and DPDK versions but recommended
 (tested) versions are:
  - ODP-DPDK (https://github.com/OpenDataPlane/odp-dpdk) version 1.25.2,
  platform 'linux-generic'
- - DPDK version v18.11.
+ - DPDK version v19.11.
 
 
 Tools
