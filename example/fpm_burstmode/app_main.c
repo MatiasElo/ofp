@@ -335,8 +335,8 @@ int main(int argc, char *argv[])
 		linux_sp_core, first_worker, num_workers);
 
 	odp_memset(itf_id, 0, sizeof(itf_id));
-	if (configure_interfaces(&params.itf_param,
-				 num_workers, num_workers, itf_id)) {
+	if (configure_interfaces(&params.itf_param, /*one tx queue for SP core*/
+				 num_workers + 1, num_workers, itf_id)) {
 		OFP_ERR("Error: Failed to configure interfaces.\n");
 		ofp_terminate();
 		parse_args_cleanup(&params);
