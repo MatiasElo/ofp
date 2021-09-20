@@ -148,7 +148,10 @@ static int configure_interfaces(appl_arg_ifs_t *itf_param,
 
 	odp_pktin_queue_param_init(&pktin_param);
 	pktin_param.op_mode = ODP_PKTIO_OP_MT_UNSAFE;
-	pktin_param.hash_enable = 0;
+	pktin_param.hash_enable = 1;
+	pktin_param.hash_proto.proto.ipv4_udp = 1;
+	pktin_param.hash_proto.proto.ipv4_tcp = 1;
+	pktin_param.hash_proto.proto.ipv6_udp = 1;
 	pktin_param.num_queues = rx_queues;
 
 	odp_pktout_queue_param_init(&pktout_param);

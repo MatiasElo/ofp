@@ -285,7 +285,7 @@ void ofp_initialize_param_from_file(ofp_initialize_param_t *params,
 	params->if_sp_mgmt = 1;
 	params->if_sp_offset = 0;
 	params->pktin_mode = ODP_PKTIN_MODE_SCHED;
-	params->pktout_mode = ODP_PKTIN_MODE_DIRECT;
+	params->pktout_mode = ODP_PKTOUT_MODE_DIRECT;
 	params->sched_sync = ODP_SCHED_SYNC_ATOMIC;
 	params->sched_group = ODP_SCHED_GROUP_ALL;
 #ifdef SP
