@@ -81,7 +81,7 @@ Download and build OpenDataPlane (ODP) library:
 
     git clone https://github.com/OpenDataPlane/odp-dpdk
     cd odp-dpdk
-    git checkout v1.25.2.0_DPDK_19.11
+    git checkout v1.31.0.1_DPDK_19.11
     ./bootstrap
     ./configure --prefix=<INSTALL ODP TO THIS DIR>
     make
@@ -121,7 +121,7 @@ ODP/DPDK recommended versions:
 
 OFPgen2 supports a wider variety of ODP and DPDK versions but recommended
 (tested) versions are:
- - ODP-DPDK (https://github.com/OpenDataPlane/odp-dpdk) version 1.25.2,
+ - ODP-DPDK (https://github.com/OpenDataPlane/odp-dpdk) version v1.31.0.1,
  platform 'linux-generic'
  - DPDK version v19.11.
 

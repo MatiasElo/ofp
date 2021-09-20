@@ -44,7 +44,7 @@ popd
 # Clone odp-dpdk
 git clone -q https://github.com/OpenDataPlane/odp-dpdk
 pushd odp-dpdk
-git checkout -b local_v1.25.2 v1.25.2.0_DPDK_19.11
+git checkout -b local_v1.31.0.1 v1.31.0.1_DPDK_19.11
 
 echo > $(pwd)/platform/linux-generic/Makefile.inc
 
