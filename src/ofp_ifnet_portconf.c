@@ -271,16 +271,14 @@ static void print_eth_stats(odp_pktio_stats_t stats, ofp_print_t *pr)
 	ofp_print(pr,
 		  "\tRX: bytes:%lu packets:%lu dropped:%lu errors:%lu\r\n",
 		  stats.in_octets,
-		  stats.in_ucast_pkts + stats.in_mcast_pkts +
-		  stats.in_bcast_pkts,
+		  stats.in_packets,
 		  stats.in_discards,
 		  stats.in_errors);
 
 	ofp_print(pr,
 		  "\tTX: bytes:%lu packets:%lu dropped:%lu error:%lu\r\n\r\n",
 		  stats.out_octets,
-		  stats.out_ucast_pkts + stats.out_mcast_pkts +
-		  stats.out_bcast_pkts,
+		  stats.out_packets,
 		  stats.out_discards,
 		  stats.out_errors);
 }
