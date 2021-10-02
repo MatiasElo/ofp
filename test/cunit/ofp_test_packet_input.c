@@ -33,6 +33,7 @@
 #include <ofpi_hook.h>
 #include <ofpi_util.h>
 #include <ofpi_debug.h>
+#include <ofpi_ifnet_shm.h>
 
 #include "ofp_route_arp.h"
 
@@ -206,6 +207,9 @@ static void
 test_init_ifnet(void)
 {
 	char str[256];
+
+	/* Make port 'available' */
+	V_ifnet_port[port].if_state = OFP_IFT_STATE_USED;
 
 	ofp_ifport_net_ipv4_up(port, vlan, vrf, local_ip, 24, 1);
 

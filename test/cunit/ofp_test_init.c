@@ -116,7 +116,7 @@ main(void)
 		return CU_get_error();
 
 	/* add a suite to the registry */
-	ptr_suite = CU_add_suite("ofp packet input", init_suite, clean_suite);
+	ptr_suite = CU_add_suite("ofp init", init_suite, clean_suite);
 	if (NULL == ptr_suite) {
 		CU_cleanup_registry();
 		return CU_get_error();

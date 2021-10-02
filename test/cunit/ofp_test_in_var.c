@@ -4,9 +4,18 @@
  *
  * SPDX-License-Identifier:     BSD-3-Clause
  */
+
+#ifndef OFP_TESTMODE_AUTO
+#define OFP_TESTMODE_AUTO 1
+#endif
+
 #include <stdlib.h>
 #include <arpa/inet.h>
+#if OFP_TESTMODE_AUTO
+#include <CUnit/Automated.h>
+#else
 #include <CUnit/Basic.h>
+#endif
 
 #include "ofpi_ifnet_portconf.h"
 #include "api/ofp_in.h"
@@ -201,8 +210,14 @@ int main(void)
 		return CU_get_error();
 	}
 
+#if OFP_TESTMODE_AUTO
+	CU_set_output_filename("CUnit-IN-VAR");
+	CU_automated_run_tests();
+#else
+	/* Run all tests using the CUnit Basic interface */
 	CU_basic_set_mode(CU_BRM_VERBOSE);
 	CU_basic_run_tests();
+#endif
 
 	const int nr_of_failed_tests = CU_get_number_of_tests_failed();
 	const int nr_of_failed_suites = CU_get_number_of_suites_failed();

@@ -5,7 +5,9 @@
  * SPDX-License-Identifier:     BSD-3-Clause
  */
 
-//#define OFP_TESTMODE_AUTO 1
+#ifndef OFP_TESTMODE_AUTO
+#define OFP_TESTMODE_AUTO 1
+#endif
 
 #if defined(OFP_TESTMODE_AUTO)
 #include <CUnit/Automated.h>
@@ -134,7 +136,7 @@ int main(void)
 	}
 
 #if defined(OFP_TESTMODE_AUTO)
-	CU_set_output_filename("CUnit-Util");
+	CU_set_output_filename("CUnit-Errno");
 	CU_automated_run_tests();
 #else
 	/* Run all tests using the CUnit Basic interface */

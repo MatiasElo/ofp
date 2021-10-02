@@ -61,6 +61,7 @@ init_suite(void)
 	(void)ofp_initialize(&params);
 
 	dev = ofp_get_ifnet(0, OFP_IFPORT_NET_SUBPORT_ITF, 0);
+	dev->if_state = OFP_IFT_STATE_USED;
 	dev->if_mtu = ifmtu;
 	memcpy(dev->if_mac, ifmac, OFP_ETHER_ADDR_LEN);
 	ofp_mac_to_link_local(ifmac, link_local);

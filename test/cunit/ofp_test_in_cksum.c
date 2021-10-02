@@ -261,7 +261,7 @@ main(void)
 		return CU_get_error();
 
 	/* add a suite to the registry */
-	ptr_suite = CU_add_suite("ofp util", init_suite, clean_suite);
+	ptr_suite = CU_add_suite("ofp in cksum", init_suite, clean_suite);
 	if (NULL == ptr_suite) {
 		CU_cleanup_registry();
 		return CU_get_error();
@@ -295,7 +295,7 @@ main(void)
 	}
 
 #if OFP_TESTMODE_AUTO
-	CU_set_output_filename("CUnit-Util");
+	CU_set_output_filename("CUnit-In-Cksum");
 	CU_automated_run_tests();
 #else
 	/* Run all tests using the CUnit Basic interface */
