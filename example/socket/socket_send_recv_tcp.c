@@ -43,7 +43,7 @@ static int _send_tcp4(int fd, uint32_t s_addr, uint32_t cycles)
 
 int send_tcp4_local_ip(int fd)
 {
-	return _send_tcp4(fd, IP4(192, 168, 100, 1), 1);
+	return _send_tcp4(fd, TEST_ADDR4, 1);
 }
 
 int send_multi_tcp4_any(int fd)
@@ -101,7 +101,7 @@ int send_tcp6_local_ip(int fd)
 	addr.sin6_len = sizeof(struct ofp_sockaddr_in6);
 	addr.sin6_family = OFP_AF_INET6;
 	addr.sin6_port = odp_cpu_to_be_16(TEST_PORT + 1);
-	inet_pton(AF_INET6, "fd00:1baf::1", (void *)&addr.sin6_addr);
+	ofp_parse_ip6_addr(TEST_ADDR6_STR, 0, addr.sin6_addr.ofp_s6_addr);
 
 	if ((ofp_connect(fd, (struct ofp_sockaddr *)&addr,
 			sizeof(addr)) == -1) &&

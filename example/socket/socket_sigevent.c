@@ -28,7 +28,7 @@ int recv_send_udp_local_ip(int fd)
 	dest_addr.sin_len = sizeof(struct ofp_sockaddr_in);
 	dest_addr.sin_family = OFP_AF_INET;
 	dest_addr.sin_port = odp_cpu_to_be_16(TEST_PORT + 1);
-	dest_addr.sin_addr.s_addr = IP4(192, 168, 100, 1);
+	dest_addr.sin_addr.s_addr = TEST_ADDR4;
 
 	if (ofp_sendto(fd, buf, strlen(buf), 0,
 		(struct ofp_sockaddr *)&dest_addr,
@@ -57,7 +57,7 @@ int socket_sigevent_udp4(int fd)
 	dest_addr.sin_len = sizeof(struct ofp_sockaddr_in);
 	dest_addr.sin_family = OFP_AF_INET;
 	dest_addr.sin_port = odp_cpu_to_be_16(TEST_PORT);
-	dest_addr.sin_addr.s_addr = IP4(192, 168, 100, 1);
+	dest_addr.sin_addr.s_addr = TEST_ADDR4;
 
 	if (ofp_sendto(fd, buf, strlen(buf), 0,
 		(struct ofp_sockaddr *)&dest_addr,
@@ -128,7 +128,7 @@ int recv_send_udp6_local_ip(int fd)
 	dest_addr.sin6_len = sizeof(struct ofp_sockaddr_in6);
 	dest_addr.sin6_family = OFP_AF_INET6;
 	dest_addr.sin6_port = odp_cpu_to_be_16(TEST_PORT + 1);
-	inet_pton(AF_INET6, "fd00:1baf::1", (void *)&dest_addr.sin6_addr);
+	ofp_parse_ip6_addr(TEST_ADDR6_STR, 0, dest_addr.sin6_addr.ofp_s6_addr);
 
 	if (ofp_sendto(fd, buf, strlen(buf), 0,
 		(struct ofp_sockaddr *)&dest_addr,
@@ -157,7 +157,7 @@ int socket_sigevent_udp6(int fd)
 	dest_addr.sin6_len = sizeof(struct ofp_sockaddr_in6);
 	dest_addr.sin6_family = OFP_AF_INET6;
 	dest_addr.sin6_port = odp_cpu_to_be_16(TEST_PORT);
-	inet_pton(AF_INET6, "fd00:1baf::1", (void *)&dest_addr.sin6_addr);
+	ofp_parse_ip6_addr(TEST_ADDR6_STR, 0, dest_addr.sin6_addr.ofp_s6_addr);
 
 	if (ofp_sendto(fd, buf, strlen(buf), 0,
 		(struct ofp_sockaddr *)&dest_addr,
@@ -222,7 +222,7 @@ int connect_recv_send_tcp_local_ip(int fd)
 	addr.sin_len = sizeof(struct ofp_sockaddr_in);
 	addr.sin_family = OFP_AF_INET;
 	addr.sin_port = odp_cpu_to_be_16(TEST_PORT + 1);
-	addr.sin_addr.s_addr = IP4(192, 168, 100, 1);
+	addr.sin_addr.s_addr = TEST_ADDR4;
 
 	if ((ofp_connect(fd, (struct ofp_sockaddr *)&addr,
 			sizeof(addr)) == -1) &&
@@ -258,7 +258,7 @@ int connect_recv_send_tcp6_local_ip(int fd)
 	addr.sin6_len = sizeof(struct ofp_sockaddr_in6);
 	addr.sin6_family = OFP_AF_INET6;
 	addr.sin6_port = odp_cpu_to_be_16(TEST_PORT + 1);
-	inet_pton(AF_INET6, "fd00:1baf::1", (void *)&addr.sin6_addr);
+	ofp_parse_ip6_addr(TEST_ADDR6_STR, 0, addr.sin6_addr.ofp_s6_addr);
 
 	if ((ofp_connect(fd, (struct ofp_sockaddr *)&addr,
 			sizeof(addr)) == -1) &&
@@ -352,7 +352,7 @@ int connect_tcp_delayed_local_ip(int fd)
 	addr.sin_len = sizeof(struct ofp_sockaddr_in);
 	addr.sin_family = OFP_AF_INET;
 	addr.sin_port = odp_cpu_to_be_16(TEST_PORT + 1);
-	addr.sin_addr.s_addr = IP4(192, 168, 100, 1);
+	addr.sin_addr.s_addr = TEST_ADDR4;
 
 	if ((ofp_connect(fd, (struct ofp_sockaddr *)&addr,
 			sizeof(addr)) == -1) &&
@@ -377,7 +377,7 @@ int connect_tcp6_delayed_local_ip(int fd)
 	addr.sin6_len = sizeof(struct ofp_sockaddr_in6);
 	addr.sin6_family = OFP_AF_INET6;
 	addr.sin6_port = odp_cpu_to_be_16(TEST_PORT + 1);
-	inet_pton(AF_INET6, "fd00:1baf::1", (void *)&addr.sin6_addr);
+	ofp_parse_ip6_addr(TEST_ADDR6_STR, 0, addr.sin6_addr.ofp_s6_addr);
 
 	if ((ofp_connect(fd, (struct ofp_sockaddr *)&addr,
 			sizeof(addr)) == -1) &&

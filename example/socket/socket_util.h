@@ -12,11 +12,25 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <arpa/inet.h>
+
+#define IP4(a, b, c, d) (a|(b<<8)|(c<<16)|(d<<24))
 
 #define TEST_PORT 54321
 
-#define IP4(a, b, c, d) (a|(b<<8)|(c<<16)|(d<<24))
+#define TEST_ADDR4_STR "192.168.100.1"
+#define TEST_ADDR4 IP4(192,168,100,1)
+#define TEST_ADDR4_MASK 24
+
+#define TEST_ADDR6_STR "fd00:1baf::1"
+#define TEST_ADDR6_MASK 64
+
+#define TEST_LOOP4_STR "127.0.0.1"
+#define TEST_LOOP4 IP4(127,0,0,1)
+#define TEST_LOOP4_MASK 8
+
+#define TEST_LOOP6_STR "::1"
+#define TEST_LOOP6 ofp_in6addr_loopback
+#define TEST_LOOP6_MASK 16
 
 #endif /*__SOCKET_UTIL_H__*/
 

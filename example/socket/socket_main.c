@@ -44,6 +44,7 @@ typedef struct {
 } appl_args_t;
 
 /* helper funcs */
+static int configure_interface_addresses(void);
 static void parse_args(int argc, char *argv[], appl_args_t *appl_args);
 static void print_info(char *progname, appl_args_t *appl_args,
 		       odp_cpumask_t *cpumask);
@@ -125,8 +126,20 @@ int main(int argc, char *argv[])
 	}
 
 	sleep(2);
-	/* Process CLI file */
-	ofp_cli_process_file(params.cli_file);
+
+	if (params.cli_file) {
+		/* Configure IP addresses from CLI file */
+		ofp_cli_process_file(params.cli_file);
+	} else {
+		/* Configure default IP addresses*/
+		ret_val = configure_interface_addresses();
+		if (ret_val != 0) {
+			ofp_stop_processing();
+			ofp_thread_join(thread_tbl, num_workers);
+			ofp_terminate();
+			return EXIT_FAILURE;
+		}
+	}
 	sleep(5);
 
 	ofp_loglevel_set(OFP_LOG_INFO);
@@ -525,6 +538,52 @@ int main(int argc, char *argv[])
 }
 
 /**
+ * Configure IP addresses
+ *
+ */
+static int configure_interface_addresses(void)
+{
+	const char *err;
+#ifdef INET6
+	uint8_t addr6[16];
+#endif /*INET6*/
+
+	err = ofp_ifport_local_ipv4_up(0, 0, TEST_LOOP4, TEST_LOOP4_MASK, 0);
+	if (err) {
+		OFP_ERR("Failed to configure IPv4 address (l0): %s", err);
+		return -1;
+	}
+
+#ifdef INET6
+	memcpy(addr6, TEST_LOOP6.ofp_s6_addr, TEST_LOOP6_MASK);
+	err = ofp_ifport_local_ipv6_up(0, addr6, 64);
+	if (err) {
+		OFP_ERR("Failed to configure IPv6 address (l0): %s", err);
+		return -1;
+	}
+#endif /*INET6*/
+
+	err = ofp_ifport_net_ipv4_up(0, OFP_IFPORT_NET_SUBPORT_ITF, 0,
+				     TEST_ADDR4, TEST_ADDR4_MASK, 0);
+	if (err) {
+		OFP_ERR("Failed to configure IPv4 address (fp0): %s", err);
+		return -1;
+	}
+
+#ifdef INET6
+	ofp_parse_ip6_addr(TEST_ADDR6_STR, 0, addr6);
+	err = ofp_ifport_net_ipv6_up(0, OFP_IFPORT_NET_SUBPORT_ITF,
+				     addr6, TEST_ADDR6_MASK, 1);
+	if (err) {
+		OFP_ERR("Failed to configure IPv6 address (fp0): %s", err);
+		return -1;
+	}
+#endif /*INET6*/
+
+	return 0;
+}
+
+/**
  * Parse and store the command line arguments
  *
  * @param argc       argument count
@@ -699,6 +758,7 @@ static void usage(char *progname)
 		   "\n"
 		   "Optional OPTIONS\n"
 		   "  -c, --count <number> Core count.\n"
+		   "  -f, --cli-file <file> OFP CLI file - overrides default IP configuration.\n"
 		   "  -h, --help           Display help and exit.\n"
 		   "\n", NO_PATH(progname), NO_PATH(progname)
 		);

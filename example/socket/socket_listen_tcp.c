@@ -31,7 +31,7 @@ int init_tcp_bind_local_ip(int *pfd_thread1, int *pfd_thread2)
 	addr.sin_len = sizeof(struct ofp_sockaddr_in);
 	addr.sin_family = OFP_AF_INET;
 	addr.sin_port = odp_cpu_to_be_16(TEST_PORT);
-	addr.sin_addr.s_addr = IP4(192, 168, 100, 1);
+	addr.sin_addr.s_addr = TEST_ADDR4;
 
 	if (ofp_bind(*pfd_thread1, (const struct ofp_sockaddr *)&addr,
 		sizeof(struct ofp_sockaddr_in)) == -1) {
@@ -57,7 +57,7 @@ int init_tcp_bind_local_ip(int *pfd_thread1, int *pfd_thread2)
 	addr.sin_len = sizeof(struct ofp_sockaddr_in);
 	addr.sin_family = OFP_AF_INET;
 	addr.sin_port = odp_cpu_to_be_16(TEST_PORT + 1);
-	addr.sin_addr.s_addr = IP4(192, 168, 100, 1);
+	addr.sin_addr.s_addr = TEST_ADDR4;
 
 	if (ofp_bind(*pfd_thread2, (const struct ofp_sockaddr *)&addr,
 		sizeof(struct ofp_sockaddr_in)) == -1) {
@@ -84,7 +84,7 @@ int init_tcp6_bind_local_ip(int *pfd_thread1, int *pfd_thread2)
 	addr.sin6_len = sizeof(struct ofp_sockaddr_in6);
 	addr.sin6_family = OFP_AF_INET6;
 	addr.sin6_port = odp_cpu_to_be_16(TEST_PORT);
-	inet_pton(AF_INET6, "fd00:1baf::1", (void *)&addr.sin6_addr);
+	ofp_parse_ip6_addr(TEST_ADDR6_STR, 0, addr.sin6_addr.ofp_s6_addr);
 
 	if (ofp_bind(*pfd_thread1, (const struct ofp_sockaddr *)&addr,
 		sizeof(addr)) == -1) {
@@ -103,7 +103,7 @@ int init_tcp6_bind_local_ip(int *pfd_thread1, int *pfd_thread2)
 	addr.sin6_len = sizeof(struct ofp_sockaddr_in6);
 	addr.sin6_family = OFP_AF_INET6;
 	addr.sin6_port = odp_cpu_to_be_16(TEST_PORT + 1);
-	inet_pton(AF_INET6, "fd00:1baf::1", (void *)&addr.sin6_addr);
+	ofp_parse_ip6_addr(TEST_ADDR6_STR, 0, addr.sin6_addr.ofp_s6_addr);
 
 	if (ofp_bind(*pfd_thread2, (const struct ofp_sockaddr *)&addr,
 		sizeof(addr)) == -1) {
