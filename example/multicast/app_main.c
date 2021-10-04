@@ -58,13 +58,11 @@ int main(int argc, char *argv[])
 
 	ofpexpl_resources_set();
 
-#if 0
 	/* add handler for Ctr+C */
 	if (ofpexpl_sigaction_set(ofpexpl_sigfunction_stop)) {
 		printf("Error: failed to set signal actions.\n");
 		return EXIT_FAILURE;
 	}
-#endif
 
 	/* Parse and store the application arguments */
 	parse_args(argc, argv, &params);

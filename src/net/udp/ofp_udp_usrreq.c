@@ -872,6 +872,8 @@ ofp_udp_ctloutput(struct socket *so, struct sockopt *sopt)
 		}
 		break;
 	}
+#else
+	INP_WUNLOCK(inp);
 #endif
 	return (error);
 }

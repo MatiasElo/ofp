@@ -9,8 +9,11 @@
 
 #include "mcast.h"
 
+#if 1
 #define logprint(a...) do {} while (0)
-//#define logprint OFP_LOG
+#else
+#define logprint OFP_INFO
+#endif
 
 #define IP4(a, b, c, d) (a|(b<<8)|(c<<16)|(d<<24))
 
@@ -52,38 +55,42 @@ static int mcasttest(void *arg)
 	}
 
 	if ((fd = ofp_socket(OFP_AF_INET, OFP_SOCK_DGRAM, OFP_IPPROTO_UDP)) < 0) {
-		perror("socket");
-		logprint("Cannot open socket!\n");
+		OFP_ERR("Cannot open socket!\n");
 		return -1;
 	}
 
 	memset(&my_addr, 0, sizeof(my_addr));
 	my_addr.sin_family = OFP_AF_INET;
-	my_addr.sin_port = odp_cpu_to_be_16(2048);
+	my_addr.sin_port = odp_cpu_to_be_16(PORT_CMD);
 	my_addr.sin_addr.s_addr = 0;
 	my_addr.sin_len = sizeof(my_addr);
 
 	if (ofp_bind(fd, (struct ofp_sockaddr *)&my_addr,
 		       sizeof(struct ofp_sockaddr)) < 0) {
 		logprint("Cannot bind socket (%s)!\n", ofp_strerror(ofp_errno));
+		ofp_close(fd);
 		return -1;
 	}
 
 	memset(&mreq, 0, sizeof(mreq));
-        mreq.imr_multiaddr.s_addr = IP4(234,5,5,5);
-        mreq.imr_interface.s_addr = myaddr;
-        if (ofp_setsockopt(fd, OFP_IPPROTO_IP, OFP_IP_ADD_MEMBERSHIP,
+	mreq.imr_multiaddr.s_addr = IP4(234,5,5,5);
+	mreq.imr_interface.s_addr = myaddr;
+	if (ofp_setsockopt(fd, OFP_IPPROTO_IP, OFP_IP_ADD_MEMBERSHIP,
 			   &mreq, sizeof(mreq)) == -1) {
-		perror("setsockopt");
-        }
+		OFP_ERR("ofp_setsockopt() failed: %d.", ofp_errno);
+		ofp_close(fd);
+		return -1;
+	}
 
 	memset(&mreq, 0, sizeof(mreq));
-        mreq.imr_multiaddr.s_addr = IP4(234,7,7,7);
-        mreq.imr_interface.s_addr = myaddr;
-        if (ofp_setsockopt(fd, OFP_IPPROTO_IP, OFP_IP_ADD_MEMBERSHIP,
+	mreq.imr_multiaddr.s_addr = IP4(234,7,7,7);
+	mreq.imr_interface.s_addr = myaddr;
+	if (ofp_setsockopt(fd, OFP_IPPROTO_IP, OFP_IP_ADD_MEMBERSHIP,
 			   &mreq, sizeof(mreq)) == -1) {
-		perror("setsockopt");
-        }
+		OFP_ERR("ofp_setsockopt() failed: %d.", ofp_errno);
+		ofp_close(fd);
+		return -1;
+	}
 
 	while (*is_running) {
 		char buf[100];
@@ -115,7 +122,8 @@ static int mcasttest(void *arg)
 			mreq.imr_interface.s_addr = myaddr;
 			if (ofp_setsockopt(fd, OFP_IPPROTO_IP, OFP_IP_ADD_MEMBERSHIP,
 					   &mreq, sizeof(mreq)) == -1) {
-				perror("setsockopt");
+				OFP_ERR("ofp_setsockopt() failed: %d.",
+					ofp_errno);
 			}
 		} else if (strstr(buf, "drop")) {
 			OFP_INFO("Drop membership from 234.7.7.7\n");
@@ -124,10 +132,12 @@ static int mcasttest(void *arg)
 			mreq.imr_interface.s_addr = myaddr;
 			if (ofp_setsockopt(fd, OFP_IPPROTO_IP, OFP_IP_DROP_MEMBERSHIP,
 					   &mreq, sizeof(mreq)) == -1) {
-				perror("setsockopt");
+				OFP_ERR("ofp_setsockopt() failed: %d.",
+					ofp_errno);
 			}
 		} else if (strstr(buf, "quit")) {
-			exit(0);
+			ofp_stop_processing();
+			break;
 		}
 
 		OFP_INFO("Data was received from address 0x%x, port = %d.\n",
@@ -142,6 +152,8 @@ static int mcasttest(void *arg)
 			OFP_ERR("Faild to send data (errno = %d)\n", ofp_errno);
 		}
 	}
+
+	ofp_close(fd);
 
 	logprint("mcast exit\n");
 	return 0;

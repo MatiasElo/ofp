@@ -1317,37 +1317,39 @@ tcp_fill_info(struct tcpcb *tp, struct tcp_info *ti)
 int
 ofp_tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 {
-#if 0
-	int	error, opt, optval;
-	uint32_t	ui;
+	int	error, optval;
 	struct	inpcb *inp;
 	struct	tcpcb *tp;
+#if 0
+	int opt;
+	uint32_t	ui;
 	struct	tcp_info ti;
 	char buf[TCP_CA_NAME_MAX];
 	struct cc_algo *algo;
+#endif
 
 	error = 0;
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("ofp_tcp_ctloutput: inp == NULL"));
-	INP_WLOCK(inp);
 	if (sopt->sopt_level != OFP_IPPROTO_TCP) {
+		INP_WLOCK(inp);
+#if 0
 #ifdef INET6
 		if (inp->inp_vflag & INP_IPV6PROTO) {
 			INP_WUNLOCK(inp);
 			error = ip6_ctloutput(so, sopt);
 		}
 #endif /* INET6 */
-#if defined(INET6) && defined(INET)
 		else
-#endif
-#ifdef INET
+#endif /*0*/
 		{
 			INP_WUNLOCK(inp);
 			error = ofp_ip_ctloutput(so, sopt);
 		}
-#endif
 		return (error);
 	}
+
+#if 0
 	if (inp->inp_flags & (INP_TIMEWAIT | INP_DROPPED)) {
 		INP_WUNLOCK(inp);
 		return (OFP_ECONNRESET);
@@ -1626,13 +1628,6 @@ ofp_tcp_ctloutput(struct socket *so, struct sockopt *sopt)
 	}
 	return (error);
 #else
-	int error, optval;
-	struct inpcb *inp = sotoinpcb(so);
-	struct tcpcb *tp;
-
-	if (sopt->sopt_level != OFP_IPPROTO_TCP)
-		return 0;
-
 	switch (sopt->sopt_dir) {
 	case SOPT_SET:
 		switch (sopt->sopt_name) {

@@ -2699,16 +2699,16 @@ ofp_inp_setmoptions(struct inpcb *inp, struct sockopt *sopt)
 	struct ofp_ip_moptions	*imo;
 	int			 error;
 
-	OFP_DBG("HERE\n");
 	error = 0;
 
 	/*
 	 * If socket is neither of type OFP_SOCK_RAW or OFP_SOCK_DGRAM,
-	 * or is a divert socket, reject it.
+	 * or OFP_SOCK_STREAM or is a divert socket, reject it.
 	 */
 	if (inp->inp_socket->so_proto->pr_protocol == OFP_IPPROTO_DIVERT ||
 	    (inp->inp_socket->so_proto->pr_type != OFP_SOCK_RAW &&
-	     inp->inp_socket->so_proto->pr_type != OFP_SOCK_DGRAM))
+	     inp->inp_socket->so_proto->pr_type != OFP_SOCK_DGRAM &&
+	     inp->inp_socket->so_proto->pr_type != OFP_SOCK_STREAM))
 		return (OFP_EOPNOTSUPP);
 
 	switch (sopt->sopt_name) {
@@ -2847,7 +2847,6 @@ ofp_ip_ctloutput(struct socket *so, struct sockopt *sopt)
 	struct	inpcb *inp = sotoinpcb(so);
 	int	error, optval;
 
-	OFP_DBG("HERE\n");
 	error = optval = 0;
 	if (sopt->sopt_level != OFP_IPPROTO_IP) {
 		error = OFP_EINVAL;
