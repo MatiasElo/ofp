@@ -368,8 +368,9 @@ static void usage(char *progname)
 		   "  -i, --interface Eth interfaces (comma-separated, no spaces)\n"
 		   "\n"
 		   "Optional OPTIONS\n"
-		   "  -c, --count <number> Core count.\n"
-		   "  -h, --help           Display help and exit.\n"
+		   "  -c, --count <number>  Core count.\n"
+		   "  -f, --cli-file <file> OFP CLI file.\n"
+		   "  -h, --help            Display help and exit.\n"
 		   "\n", NO_PATH(progname), NO_PATH(progname)
 		);
 }
