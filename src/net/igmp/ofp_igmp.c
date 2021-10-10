@@ -2612,10 +2612,12 @@ static int myappend(odp_packet_t *pkt, int size, void *src)
 	 * TODO: Use odp_packet_add_data() instead, and handle the
 	 * segmented packets that may result.
 	 */
-	uint8_t *p = odp_packet_push_tail(*pkt, size);
+	/*workaround: cannot allocate packets of 0 size: alloc 4, use offset */
+	uint32_t off = odp_packet_len(*pkt) == 4 ? 4 : 0;
+	uint8_t *p = odp_packet_push_tail(*pkt, size - off);
 	if (!p)
 		return 0;
-	memcpy(p, src, size);
+	memcpy(p - off, src, size);
 	return 1;
 }
 
@@ -2788,7 +2790,9 @@ igmp_v3_enqueue_group_record(struct ofp_ifqueue *ifq, struct ofp_in_multi *inm,
 		}
 		m0srcs = (ifp->if_mtu - IGMP_LEADINGSPACE -
 		    sizeof(struct igmp_grouprec)) / sizeof(ofp_in_addr_t);
-		m = ofp_packet_alloc(0);
+
+		/* workaround: cannot allocate 0 size pkt: use 4 & compensate */
+		m = ofp_packet_alloc(4);
 		if (m == ODP_PACKET_INVALID)
 			return (-OFP_ENOMEM);
 
@@ -2898,10 +2902,12 @@ igmp_v3_enqueue_group_record(struct ofp_ifqueue *ifq, struct ofp_in_multi *inm,
 			CTR1(KTR_IGMPV3, "%s: outbound queue full", __func__);
 			return (-OFP_ENOMEM);
 		}
-		m = ofp_packet_alloc(0);
+		/* workaround: cannot allocate 0 size pkt: use 4 & compensate */
+		m = ofp_packet_alloc(4);
 		// HJo: to do: alloc IGMP_LEADINGSPACE
 		if (m == ODP_PACKET_INVALID)
 			return (-OFP_ENOMEM);
+
 		igmp_save_context(m, ifp);
 		pig = (struct igmp_grouprec *)((uint8_t *)odp_packet_data(m));
 		CTR1(KTR_IGMPV3, "%s: allocated next packet", __func__);
@@ -3048,12 +3054,14 @@ igmp_v3_enqueue_filter_change(struct ofp_ifqueue *ifq, struct ofp_in_multi *inm)
 				CTR1(KTR_IGMPV3,
 				    "%s: use previous packet", __func__);
 			} else {
-				m = ofp_packet_alloc(0);
+				 /* workaround: cannot allocate 0 size pkt */
+				m = ofp_packet_alloc(4);
 				if (m == ODP_PACKET_INVALID) {
 					CTR1(KTR_IGMPV3,
 					    "%s: m_get*() failed", __func__);
 					return (-OFP_ENOMEM);
 				}
+
 				igmp_save_context(m, ifp);
 				m0srcs = (ifp->if_mtu - IGMP_LEADINGSPACE -
 				    sizeof(struct igmp_grouprec)) /
@@ -3466,6 +3474,9 @@ igmp_v3_encap_report(struct ofp_ifnet *ifp, odp_packet_t m)
 	igmp->ir_rsv1 = 0;
 	igmp->ir_rsv2 = 0;
 	igmp->ir_numgrps = odp_cpu_to_be_16(PKT2HDR(m)->vt_nrecs);
+
+	/* Note: the MCAST group is already in the packet at the right offset*/
+
 	igmp->ir_cksum = 0;
 	igmp->ir_cksum = ofp_cksum_buffer(igmp,
 			sizeof(struct igmp_report) + igmpreclen);
