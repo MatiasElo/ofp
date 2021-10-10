@@ -308,6 +308,8 @@ static void print_info(char *progname, appl_args_t *appl_args,
 static void usage(char *progname)
 {
 	printf("\n"
+		   "Application joins multicast group %s and echos back the "
+		   "UDP packets received on port %d.\n\n"
 		   "Usage: %s OPTIONS\n"
 		   "  E.g. %s -i eth1,eth2,eth3\n"
 		   "\n"
@@ -318,7 +320,8 @@ static void usage(char *progname)
 		   "\n"
 		   "Optional OPTIONS\n"
 		   "  -c, --count <number> Core count.\n"
+		   "  -f, --cli-file <file> OFP CLI file.\n"
 		   "  -h, --help           Display help and exit.\n"
-		   "\n", NO_PATH(progname), NO_PATH(progname)
-		);
+		   "\n", APP_ADDR_MCAST, APP_PORT,
+		   NO_PATH(progname), NO_PATH(progname));
 }
