@@ -395,13 +395,17 @@ extern unsigned int sleep(unsigned int seconds);
 int
 ofp_sbwait(struct sockbuf *sb)
 {
+	int error;
 	SOCKBUF_LOCK_ASSERT(sb);
 
 	sb->sb_flags |= SB_WAIT;
-	return (ofp_msleep(&sb->sb_cc, &sb->sb_mtx,
-			     0 /*HJo (sb->sb_flags & SB_NOINTR) ? PSOCK : PSOCK | PCATCH*/,
-			     "sbwait",
-			     1000000UL/HZ*sb->sb_timeo));
+	error = ofp_msleep(&sb->sb_cc, &sb->sb_mtx,
+			   0 /*HJo (sb->sb_flags & SB_NOINTR) ? PSOCK : PSOCK | PCATCH*/,
+			   "sbwait",
+			   1000000UL / HZ * sb->sb_timeo);
+	if (!error && !V_global_is_running)
+		error = OFP_EINTR;
+	return error;
 }
 
 int
