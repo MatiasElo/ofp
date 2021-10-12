@@ -1058,10 +1058,6 @@ static enum ofp_return_code ofp_ip_output_find_route(struct ip_out *odata)
 			return OFP_PKT_DROP;
 	}
 
-	OFP_DBG("Found Route IP: %s NH: %s ARP Idx: %u",
-		ofp_print_ip_addr(odata->ip->ip_dst.s_addr),
-		ofp_print_ip_addr(odata->nh->gw),
-		odata->nh->arp_ent_idx);
 	odata->gw = odata->nh->gw;
 
 	odata->dev_out = ofp_get_ifnet(odata->nh->port, odata->nh->vlan, 0);
@@ -1072,8 +1068,14 @@ static enum ofp_return_code ofp_ip_output_find_route(struct ip_out *odata)
 	}
 
 	/* User has not filled in the source addess */
-	if (odata->ip->ip_src.s_addr == 0)
-		odata->ip->ip_src.s_addr = odata->dev_out->ip_addr_info[0].ip_addr;
+	if (odata->ip->ip_src.s_addr == 0) {
+		uint32_t gw = odata->gw;
+
+		if (!gw)
+			gw = odata->ip->ip_dst.s_addr;
+
+		odata->ip->ip_src.s_addr = ofp_ifnet_local_addr_find(odata->dev_out, gw);
+	}
 
 	return OFP_PKT_CONTINUE;
 }

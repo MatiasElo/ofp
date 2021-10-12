@@ -2297,6 +2297,30 @@ inline int ofp_ifnet_ip_find(struct ofp_ifnet *dev, uint32_t addr)
 	}
 	return -1;
 }
+
+uint32_t ofp_ifnet_local_addr_find(struct ofp_ifnet *dev, uint32_t gw)
+{
+	struct ofp_ifnet_ipaddr *ifaddr;
+	uint32_t mask;
+	uint32_t addr;
+	int i;
+
+	for (i = 0; i < OFP_NUM_IFNET_IP_ADDRS; i++) {
+		ifaddr = &dev->ip_addr_info[i];
+		addr = ifaddr->ip_addr;
+
+		if (!addr)
+			break;
+
+		mask = odp_cpu_to_be_32(0xFFFFFFFFULL << (32 - ifaddr->masklen));
+
+		if ((gw & mask) == (addr & mask))
+			return addr;
+	}
+
+	return dev->ip_addr_info[0].ip_addr;
+}
+
 /*
  * The address is already added in the list. Move it in the first element of the list
  * and update its fields.

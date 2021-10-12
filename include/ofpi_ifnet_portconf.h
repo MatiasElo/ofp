@@ -403,6 +403,7 @@ void ofp_ifnet_print_ip_info(ofp_print_t *pr, struct ofp_ifnet *dev);
 int ofp_ifnet_ip_find_update_fields(struct ofp_ifnet *dev, uint32_t addr, int masklen, uint32_t bcast_addr);
 int ofp_ifnet_ip_add(struct ofp_ifnet *dev, uint32_t addr);
 void ofp_ifnet_ip_remove(struct ofp_ifnet *dev, uint32_t addr);
+uint32_t ofp_ifnet_local_addr_find(struct ofp_ifnet *dev, uint32_t gw);
 
 /* Finds the node interface by the local ip assigned regardless of vlan */
 struct ofp_ifnet *ofp_get_ifnet_by_ip(uint32_t ip, uint16_t vrf);
