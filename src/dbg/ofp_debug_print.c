@@ -197,7 +197,8 @@ static void print_ipv4(FILE *f, char *p)
 				"IP ICMP: echo reply  %s -> %s  id=%d seq=%d",
 				ofp_print_ip_addr(iphdr->ip_src.s_addr),
 				ofp_print_ip_addr(iphdr->ip_dst.s_addr),
-				icmp->ofp_icmp_id, icmp->ofp_icmp_seq);
+				odp_be_to_cpu_16(icmp->ofp_icmp_id),
+				odp_be_to_cpu_16(icmp->ofp_icmp_seq));
 			break;
 		case OFP_ICMP_UNREACH:
 			ofp_printf(f, "IP ICMP: dest unreachable  %s -> %s ",
@@ -208,7 +209,8 @@ static void print_ipv4(FILE *f, char *p)
 			ofp_printf(f, "IP ICMP: echo  %s -> %s  id=%d seq=%d",
 				ofp_print_ip_addr(iphdr->ip_src.s_addr),
 				ofp_print_ip_addr(iphdr->ip_dst.s_addr),
-				icmp->ofp_icmp_id, icmp->ofp_icmp_seq);
+				odp_be_to_cpu_16(icmp->ofp_icmp_id),
+				odp_be_to_cpu_16(icmp->ofp_icmp_seq));
 			break;
 		default:
 			ofp_printf(f, "IP ICMP %d: code=%d  %s -> %s ",
