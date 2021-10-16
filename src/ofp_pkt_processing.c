@@ -1337,6 +1337,7 @@ enum ofp_return_code ofp_ip6_output(odp_packet_t pkt,
 	uint8_t is_local_address = 0;
 	uint8_t *mac = NULL;
 	enum ofp_return_code ret;
+	odp_bool_t is_eth = 1;
 
 	if (odp_packet_l3_offset(pkt) == ODP_PACKET_OFFSET_INVALID)
 		odp_packet_l3_offset_set(pkt, 0);
@@ -1379,7 +1380,16 @@ enum ofp_return_code ofp_ip6_output(odp_packet_t pkt,
 	if (ofp_if_type(dev_out) == OFP_IFT_GRE)
 		return ofp_output_ipv6_to_gre(pkt, dev_out);
 
-	if (vlan == OFP_IFPORT_NET_SUBPORT_ITF)
+	if (ofp_if_type(dev_out) == OFP_IFT_ETHER) {
+		if (vlan == OFP_IFPORT_NET_SUBPORT_ITF)
+			is_eth = 1;
+		else
+			is_eth = 0;
+	} else {
+		is_eth = 1;
+	}
+
+	if (is_eth)
 		l2_size = sizeof(struct ofp_ether_header);
 	else
 		l2_size = sizeof(struct ofp_ether_vlan_header);
@@ -1419,7 +1429,7 @@ enum ofp_return_code ofp_ip6_output(odp_packet_t pkt,
 		}
 	}
 
-	if (vlan == OFP_IFPORT_NET_SUBPORT_ITF) {
+	if (is_eth) {
 		struct ofp_ether_header *eth =
 			(struct ofp_ether_header *)l2_addr;
 
