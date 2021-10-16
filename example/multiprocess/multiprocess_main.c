@@ -13,6 +13,7 @@
 #include <arpa/inet.h>
 #include "ofp.h"
 #include "cli_arg_parse.h"
+#include "linux_sigaction.h"
 #include "odp/helper/linux.h"
 
 #define MAX_WORKERS		64
@@ -69,6 +70,12 @@ int main(int argc, char *argv[])
 	int num_workers, i, ret = 0;
 	odp_cpumask_t cpumask_workers;
 	char cpumaskstr[64];
+
+	/* add handler for Ctr+C */
+	if (ofpexpl_sigaction_set(ofpexpl_sigfunction_stop)) {
+		printf("Error: failed to set signal actions.\n");
+		return EXIT_FAILURE;
+	}
 
 	/* Parse and store the application arguments */
 	if (parse_args(argc, argv, &params) !=  EXIT_SUCCESS)

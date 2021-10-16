@@ -5,7 +5,8 @@ multiprocess_LDFLAGS = $(AM_LDFLAGS) -static
 
 dist_multiprocess_SOURCES = \
 multiprocess_main.c \
-../common/cli_arg_parse.c
+../common/cli_arg_parse.c \
+../common/linux_sigaction.c
 
 noinst_HEADERS = \
 ../common/cli_arg_parse.h
