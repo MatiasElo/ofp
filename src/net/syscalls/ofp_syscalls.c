@@ -246,6 +246,11 @@ ofp_accept(int sockfd, struct ofp_sockaddr *addr, ofp_socklen_t *addrlen)
 	}
 
 	while (OFP_TAILQ_EMPTY(&head->so_comp) && head->so_error == 0) {
+		if (!V_global_is_running) {
+			head->so_error = OFP_EINTR;
+			break;
+		}
+
 		if (head->so_rcv.sb_state & SBS_CANTRCVMORE) {
 			head->so_error = OFP_ECONNABORTED;
 			break;

@@ -767,6 +767,11 @@ ofp_soclose(struct socket *so)
 					       0, "soclos", so->so_linger*1000000);
 				if (error)
 					break;
+
+				if (!V_global_is_running) {
+					error = OFP_EINTR;
+					break;
+				}
 			}
 		}
 	}
