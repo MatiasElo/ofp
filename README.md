@@ -4,14 +4,12 @@ OpenFastPathGen2 is a spin-off of OpenFastPath project.
 Intent and purpose:
 -------------------------------------------------------------------------------
 
-OpenFastPathGen2 is a code design exercise intended to provide an overall
-improvement of functionality offered by OpenFastPath project while exploring
-utilization in small devices.
+OpenFastPathGen2 is an effort to provide an overall improvement of API and
+functionality offered by OpenFastPath project while exploring its utilization
+in small devices or multi-stack setups.
 
 OpenFastPathGen2 does not target the API or design compatibility with
-OpenFastPath project. More, rapid API or design changes are expected as part of
-the new incubation phase.
-
+OpenFastPath project.
 
 OpenFastPath general info
 ===============================================================================
@@ -125,6 +123,10 @@ OFPgen2 supports a wider variety of ODP and DPDK versions but recommended
  platform 'linux-generic'
  - DPDK version v19.11.
 
+
+OFPgen2 current stable version
+===============================================================================
+OFPgen2 current stable version is 4.0.0
 
 Tools
 ===============================================================================
